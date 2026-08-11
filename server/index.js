@@ -189,6 +189,45 @@ app.post('/api/template', async (req, res, next) => {
   }
 })
 
+app.post('/api/process', upload.single('file'), async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  const sendEvent = (payload) => {
+    res.write(`data: ${JSON.stringify(payload)}\n\n`)
+  }
+
+  if (!req.file) {
+    sendEvent({ status: 'error', error: 'No file uploaded.' })
+    res.end()
+    return
+  }
+
+  try {
+    sendEvent({ status: 'extracting' })
+    const transcript = await extractText(req.file)
+    if (!transcript.trim()) {
+      sendEvent({ status: 'error', error: 'The uploaded file has no readable text.' })
+      return
+    }
+
+    sendEvent({ status: 'structuring' })
+    const structured = await generateArticle(transcript)
+
+    sendEvent({ status: 'formatting' })
+    const html = await generateHtml(structured)
+
+    sendEvent({ status: 'done', html })
+  } catch (err) {
+    sendEvent({ status: 'error', error: err.message || 'Something went wrong.' })
+  } finally {
+    await fs.unlink(req.file.path).catch(() => {})
+    res.end()
+  }
+})
+
 app.use((err, _req, res, _next) => {
   console.error(err)
   res.status(err.status || 500).json({ error: err.message || 'Something went wrong.' })

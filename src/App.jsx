@@ -2,8 +2,14 @@ import { useState } from 'react'
 import UploadZone from './components/UploadZone.jsx'
 import ArticlePreview from './components/ArticlePreview.jsx'
 import ExportBar from './components/ExportBar.jsx'
-import { extractTranscript, generateArticleHtml } from './utils/api.js'
+import { processTranscript } from './utils/api.js'
 import './App.css'
+
+const STATUS_MESSAGES = {
+  extracting: 'Extracting content...',
+  structuring: 'Structuring article...',
+  formatting: 'Formatting for Medium...',
+}
 
 function App() {
   const [status, setStatus] = useState('upload') // 'upload' | 'processing' | 'preview'
@@ -17,12 +23,12 @@ function App() {
 
     setError('')
     setStatus('processing')
-    setProcessingMessage('Extracting content...')
+    setProcessingMessage(STATUS_MESSAGES.extracting)
 
     try {
-      const extracted = await extractTranscript(file)
-      setProcessingMessage('Building article...')
-      const html = await generateArticleHtml(extracted)
+      const html = await processTranscript(file, (stage) => {
+        setProcessingMessage(STATUS_MESSAGES[stage] || '')
+      })
       setArticle({ html })
       setStatus('preview')
     } catch (err) {
