@@ -1,121 +1,84 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import UploadZone from './components/UploadZone.jsx'
+import ArticlePreview from './components/ArticlePreview.jsx'
+import ExportBar from './components/ExportBar.jsx'
+import { convertTranscript } from './utils/api.js'
+import { parseTranscriptFile } from './utils/parseFile.js'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [status, setStatus] = useState('upload') // 'upload' | 'processing' | 'preview'
+  const [file, setFile] = useState(null)
+  const [processingMessage, setProcessingMessage] = useState('')
+  const [article, setArticle] = useState(null)
+  const [error, setError] = useState('')
+
+  const handleGenerate = async () => {
+    if (!file) return
+
+    setError('')
+    setStatus('processing')
+    setProcessingMessage('Extracting content...')
+
+    try {
+      const transcript = await parseTranscriptFile(file)
+      setProcessingMessage('Building article...')
+      const result = await convertTranscript(transcript)
+      setArticle(result)
+      setStatus('preview')
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.')
+      setStatus('upload')
+    }
+  }
+
+  const handleReset = () => {
+    setFile(null)
+    setArticle(null)
+    setError('')
+    setStatus('upload')
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      {status !== 'preview' && (
+        <header className="app-header">
+          <h1>Transcript to Medium</h1>
+          <p>Turn Applied AI session transcripts into polished Medium articles</p>
+        </header>
+      )}
 
-      <div className="ticks"></div>
+      <main className="app-main">
+        {status === 'upload' && (
+          <div className="upload-stage">
+            <UploadZone file={file} onFileSelected={setFile} />
+            {error && <p className="app-error">{error}</p>}
+            <button
+              type="button"
+              className="btn btn-primary generate-btn"
+              disabled={!file}
+              onClick={handleGenerate}
+            >
+              Generate article
+            </button>
+          </div>
+        )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        {status === 'processing' && (
+          <div className="processing-stage">
+            <div className="spinner" />
+            <p className="processing-message">{processingMessage}</p>
+          </div>
+        )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        {status === 'preview' && article && (
+          <div className="preview-stage">
+            <ArticlePreview article={article} />
+            <ExportBar article={article} onReset={handleReset} />
+          </div>
+        )}
+      </main>
+    </div>
   )
 }
 
