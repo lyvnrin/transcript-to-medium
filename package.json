@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.js",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -15,6 +16,8 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "mammoth": "^1.12.1",
+    "multer": "^2.2.0",
+    "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
