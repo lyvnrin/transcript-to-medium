@@ -10,10 +10,7 @@ function ExportBar({ article, onReset }) {
   }
 
   const handleCopy = async () => {
-    const text = [article.title, article.subtitle, ...article.content.map((block) => block.text)]
-      .filter(Boolean)
-      .join('\n\n')
-    await copyToClipboard(text)
+    await copyToClipboard(article.html)
     flash('Copied to clipboard')
   }
 

@@ -2,8 +2,7 @@ import { useState } from 'react'
 import UploadZone from './components/UploadZone.jsx'
 import ArticlePreview from './components/ArticlePreview.jsx'
 import ExportBar from './components/ExportBar.jsx'
-import { convertTranscript } from './utils/api.js'
-import { parseTranscriptFile } from './utils/parseFile.js'
+import { extractTranscript, generateArticleHtml } from './utils/api.js'
 import './App.css'
 
 function App() {
@@ -21,10 +20,10 @@ function App() {
     setProcessingMessage('Extracting content...')
 
     try {
-      const transcript = await parseTranscriptFile(file)
+      const extracted = await extractTranscript(file)
       setProcessingMessage('Building article...')
-      const result = await convertTranscript(transcript)
-      setArticle(result)
+      const html = await generateArticleHtml(extracted)
+      setArticle({ html })
       setStatus('preview')
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.')
@@ -73,7 +72,7 @@ function App() {
 
         {status === 'preview' && article && (
           <div className="preview-stage">
-            <ArticlePreview article={article} />
+            <ArticlePreview html={article.html} />
             <ExportBar article={article} onReset={handleReset} />
           </div>
         )}
