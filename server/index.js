@@ -10,7 +10,7 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-const PORT = 3001
+const PORT = 3002
 const MODEL = 'claude-sonnet-4-6'
 
 const SYSTEM_PROMPT = `You are an editorial assistant for a biweekly Applied AI & Tech knowledge-sharing series. You receive raw meeting transcripts. Extract and structure the content into JSON with this shape:
