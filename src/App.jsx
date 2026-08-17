@@ -304,9 +304,11 @@ function App() {
         )}
       </main>
 
-      <footer className="app-footer">
-        <p>Developed by Lavanya Kamble</p>
-      </footer>
+      {!isWorkspace && (
+        <footer className="app-footer">
+          <p>Developed by Lavanya Kamble</p>
+        </footer>
+      )}
 
       </div>
       </div>
