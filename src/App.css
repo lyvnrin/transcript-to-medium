@@ -433,6 +433,10 @@
   padding: 18px 12px;
   text-align: left;
   outline: none;
+  font: inherit;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s;
 }
 
@@ -652,6 +656,11 @@
   font-family: var(--serif);
   font-weight: 600;
   font-size: 16px;
+}
+
+.editions-panel .panel-search {
+  width: 100%;
+  margin: 12px 0 4px;
 }
 
 .editions-panel-close {

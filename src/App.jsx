@@ -31,6 +31,7 @@ function App() {
   const [article, setArticle] = useState(null) // { id, html, sourceFilename }
   const [editions, setEditions] = useState([])
   const [editionSearch, setEditionSearch] = useState('')
+  const [panelSearch, setPanelSearch] = useState('')
   const [editionsPanelOpen, setEditionsPanelOpen] = useState(false)
   const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'light')
@@ -42,15 +43,55 @@ function App() {
   }, [theme])
 
   useEffect(() => {
-    const lastId = localStorage.getItem(LAST_EDITION_KEY)
-    if (!lastId) return
+    const loadPath = async (pathname) => {
+      setError('')
+      const editionMatch = pathname.match(/^\/edition\/(\d+)$/)
 
-    fetchEdition(lastId)
-      .then((edition) => {
-        setArticle(toArticle(edition))
-        setView('preview')
-      })
-      .catch(() => localStorage.removeItem(LAST_EDITION_KEY))
+      if (editionMatch) {
+        try {
+          const edition = await fetchEdition(Number(editionMatch[1]))
+          setArticle(toArticle(edition))
+          localStorage.setItem(LAST_EDITION_KEY, edition.id)
+          setView('preview')
+        } catch {
+          localStorage.removeItem(LAST_EDITION_KEY)
+          window.history.replaceState(null, '', '/')
+          setView('upload')
+        }
+        return
+      }
+
+      if (pathname === '/history') {
+        setView('history')
+        try {
+          setEditions(await fetchEditions())
+        } catch (err) {
+          setError(err.message || 'Failed to load past editions.')
+        }
+        return
+      }
+
+      if (pathname === '/info') {
+        setView('info')
+        return
+      }
+
+      setView('upload')
+    }
+
+    let initialPath = window.location.pathname
+    if (initialPath === '/') {
+      const lastId = localStorage.getItem(LAST_EDITION_KEY)
+      if (lastId) {
+        initialPath = `/edition/${lastId}`
+        window.history.replaceState(null, '', initialPath)
+      }
+    }
+    loadPath(initialPath)
+
+    const onPopState = () => loadPath(window.location.pathname)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
   const handleGenerate = async () => {
@@ -66,6 +107,7 @@ function App() {
       })
       setArticle({ id, html, sourceFilename: file.name })
       localStorage.setItem(LAST_EDITION_KEY, id)
+      window.history.pushState(null, '', `/edition/${id}`)
       setView('preview')
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.')
@@ -79,12 +121,19 @@ function App() {
     setError('')
     setEditionsPanelOpen(false)
     localStorage.removeItem(LAST_EDITION_KEY)
+    window.history.pushState(null, '', '/')
     setView('upload')
+  }
+
+  const openInfo = () => {
+    window.history.pushState(null, '', '/info')
+    setView('info')
   }
 
   const openHistory = async () => {
     setError('')
     setEditionSearch('')
+    window.history.pushState(null, '', '/history')
     setView('history')
     try {
       setEditions(await fetchEditions())
@@ -98,6 +147,7 @@ function App() {
       const edition = await fetchEdition(id)
       setArticle(toArticle(edition))
       localStorage.setItem(LAST_EDITION_KEY, edition.id)
+      window.history.pushState(null, '', `/edition/${edition.id}`)
       setView('preview')
     } catch (err) {
       setError(err.message || 'Failed to load that edition.')
@@ -125,6 +175,7 @@ function App() {
 
     try {
       setEditions(await fetchEditions())
+      setPanelSearch('')
       setEditionsPanelOpen(true)
     } catch (err) {
       setError(err.message || 'Failed to load past editions.')
@@ -161,7 +212,7 @@ function App() {
             <button type="button" className={view === 'history' ? 'active' : ''} onClick={openHistory}>
               Past editions
             </button>
-            <button type="button" className={view === 'info' ? 'active' : ''} onClick={() => setView('info')}>
+            <button type="button" className={view === 'info' ? 'active' : ''} onClick={openInfo}>
               How it works
             </button>
           </nav>
@@ -194,8 +245,8 @@ function App() {
         {view === 'history' && (
           <div className="history-stage">
             <p className="history-notice">
-              Editions are stored locally in this project's SQLite database — not backed up or synced anywhere
-              else. Clearing the server's data folder (or deleting them below) removes them for good.
+              Past editions are stored locally, not backed up or synced anywhere else. Deleting them here removes
+              them for good.
             </p>
 
             <div className="history-toolbar">
@@ -265,7 +316,24 @@ function App() {
                       ×
                     </button>
                   </div>
-                  <EditionsList editions={editions} onSelect={openEdition} activeId={article.id} />
+                  <input
+                    type="search"
+                    className="history-search panel-search"
+                    placeholder="Search past editions..."
+                    value={panelSearch}
+                    onChange={(event) => setPanelSearch(event.target.value)}
+                    aria-label="Search past editions"
+                  />
+                  <EditionsList
+                    editions={editions.filter((edition) =>
+                      edition.title.toLowerCase().includes(panelSearch.trim().toLowerCase()),
+                    )}
+                    onSelect={openEdition}
+                    activeId={article.id}
+                    emptyMessage={
+                      panelSearch.trim() && editions.length ? 'No editions match your search.' : undefined
+                    }
+                  />
                 </aside>
               )}
             </div>
