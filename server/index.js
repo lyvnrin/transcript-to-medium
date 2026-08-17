@@ -7,7 +7,7 @@ import mammoth from 'mammoth'
 import { PDFParse } from 'pdf-parse'
 import Anthropic from '@anthropic-ai/sdk'
 import dotenv from 'dotenv'
-import { insertEdition, listEditions, getEdition, deleteAllEditions } from './db.js'
+import { insertEdition, listEditions, getEdition, deleteAllEditions, deleteEdition } from './db.js'
 
 dotenv.config()
 
@@ -418,6 +418,11 @@ app.get('/api/editions/:id', (req, res, next) => {
 
 app.delete('/api/editions', (_req, res) => {
   deleteAllEditions()
+  res.status(204).end()
+})
+
+app.delete('/api/editions/:id', (req, res) => {
+  deleteEdition(Number(req.params.id))
   res.status(204).end()
 })
 

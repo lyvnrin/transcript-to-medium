@@ -8,7 +8,13 @@ function formatDateTime(sqliteTimestamp) {
   })
 }
 
-function EditionsList({ editions, onSelect, activeId, emptyMessage = 'No past editions yet. Generate one to see it here.' }) {
+function EditionsList({
+  editions,
+  onSelect,
+  onDelete,
+  activeId,
+  emptyMessage = 'No past editions yet. Generate one to see it here.',
+}) {
   if (!editions.length) {
     return <p className="editions-empty">{emptyMessage}</p>
   }
@@ -20,10 +26,16 @@ function EditionsList({ editions, onSelect, activeId, emptyMessage = 'No past ed
     onSelect(id)
   }
 
+  const handleDeleteClick = (event, edition) => {
+    event.preventDefault()
+    event.stopPropagation()
+    onDelete(edition.id, edition.title)
+  }
+
   return (
     <ul className="editions-list">
       {editions.map((edition) => (
-        <li key={edition.id}>
+        <li key={edition.id} className="edition-row">
           <a
             href={`/edition/${edition.id}`}
             className={`edition-item${edition.id === activeId ? ' is-active' : ''}`}
@@ -35,6 +47,17 @@ function EditionsList({ editions, onSelect, activeId, emptyMessage = 'No past ed
             </div>
             <span className="edition-date">{formatDateTime(edition.created_at)}</span>
           </a>
+
+          {onDelete && (
+            <button
+              type="button"
+              className="edition-delete"
+              aria-label={`Delete edition #${edition.id}`}
+              onClick={(event) => handleDeleteClick(event, edition)}
+            >
+              ×
+            </button>
+          )}
         </li>
       ))}
     </ul>

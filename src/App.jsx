@@ -8,7 +8,7 @@ import ArticleMenu from './components/ArticleMenu.jsx'
 import PastEditionsMenu from './components/PastEditionsMenu.jsx'
 import BackToTop from './components/BackToTop.jsx'
 import InfoPage from './components/InfoPage.jsx'
-import { processTranscript, fetchEditions, fetchEdition, deleteAllEditions } from './utils/api.js'
+import { processTranscript, fetchEditions, fetchEdition, deleteAllEditions, deleteEdition } from './utils/api.js'
 import './App.css'
 
 const STATUS_MESSAGES = {
@@ -174,6 +174,23 @@ function App() {
     }
   }
 
+  const handleDeleteEdition = async (id, title) => {
+    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return
+
+    try {
+      await deleteEdition(id)
+      setEditions((prev) => prev.filter((edition) => edition.id !== id))
+      if (localStorage.getItem(LAST_EDITION_KEY) === String(id)) {
+        localStorage.removeItem(LAST_EDITION_KEY)
+      }
+      if (article?.id === id) {
+        handleReset()
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to delete that edition.')
+    }
+  }
+
   return (
     <div className={`app${isWorkspace ? ' is-workspace' : ''}`}>
       {isLanding && (
@@ -266,6 +283,7 @@ function App() {
                 edition.title.toLowerCase().includes(editionSearch.trim().toLowerCase()),
               )}
               onSelect={openEdition}
+              onDelete={handleDeleteEdition}
               emptyMessage={
                 editionSearch.trim() && editions.length
                   ? 'No editions match your search.'
@@ -288,6 +306,7 @@ function App() {
                 editions={editions}
                 activeId={article.id}
                 onSelect={openEdition}
+                onDelete={handleDeleteEdition}
                 onOpen={loadEditionsForMenu}
               />
             </div>

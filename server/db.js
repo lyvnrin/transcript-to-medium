@@ -37,6 +37,15 @@ export function getEdition(id) {
   return db.prepare('SELECT id, title, html, created_at, source_filename FROM editions WHERE id = ?').get(id)
 }
 
-export function deleteAllEditions() {
+const deleteAllEditionsTx = db.transaction(() => {
   db.prepare('DELETE FROM editions').run()
+  db.prepare("DELETE FROM sqlite_sequence WHERE name = 'editions'").run()
+})
+
+export function deleteAllEditions() {
+  deleteAllEditionsTx()
+}
+
+export function deleteEdition(id) {
+  db.prepare('DELETE FROM editions WHERE id = ?').run(id)
 }

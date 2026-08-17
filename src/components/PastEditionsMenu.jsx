@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import EditionsList from './EditionsList.jsx'
 
-function PastEditionsMenu({ editions, activeId, onSelect, onOpen }) {
+function PastEditionsMenu({ editions, activeId, onSelect, onDelete, onOpen }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const menuRef = useRef(null)
@@ -66,6 +66,7 @@ function PastEditionsMenu({ editions, activeId, onSelect, onOpen }) {
           <EditionsList
             editions={filtered}
             onSelect={handleSelect}
+            onDelete={onDelete}
             activeId={activeId}
             emptyMessage={search.trim() && editions.length ? 'No editions match your search.' : undefined}
           />
