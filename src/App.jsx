@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Grainient from './components/Grainient/Grainient.jsx'
 import UploadZone from './components/UploadZone.jsx'
 import ArticlePreview from './components/ArticlePreview.jsx'
 import ExportBar from './components/ExportBar.jsx'
@@ -6,7 +7,7 @@ import EditionsList from './components/EditionsList.jsx'
 import ArticleMenu from './components/ArticleMenu.jsx'
 import BackToTop from './components/BackToTop.jsx'
 import InfoPage from './components/InfoPage.jsx'
-import { processTranscript, fetchEditions, fetchEdition } from './utils/api.js'
+import { processTranscript, fetchEditions, fetchEdition, deleteAllEditions } from './utils/api.js'
 import './App.css'
 
 const STATUS_MESSAGES = {
@@ -29,9 +30,11 @@ function App() {
   const [processingMessage, setProcessingMessage] = useState('')
   const [article, setArticle] = useState(null) // { id, html, sourceFilename }
   const [editions, setEditions] = useState([])
+  const [editionSearch, setEditionSearch] = useState('')
   const [editionsPanelOpen, setEditionsPanelOpen] = useState(false)
   const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'light')
+  const isLanding = view !== 'preview' && view !== 'processing'
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -81,6 +84,7 @@ function App() {
 
   const openHistory = async () => {
     setError('')
+    setEditionSearch('')
     setView('history')
     try {
       setEditions(await fetchEditions())
@@ -100,6 +104,19 @@ function App() {
     }
   }
 
+  const handleDeleteAllEditions = async () => {
+    if (!editions.length) return
+    if (!window.confirm('Delete all past editions? This cannot be undone.')) return
+
+    try {
+      await deleteAllEditions()
+      setEditions([])
+      localStorage.removeItem(LAST_EDITION_KEY)
+    } catch (err) {
+      setError(err.message || 'Failed to delete past editions.')
+    }
+  }
+
   const toggleEditionsPanel = async () => {
     if (editionsPanelOpen) {
       setEditionsPanelOpen(false)
@@ -116,6 +133,23 @@ function App() {
 
   return (
     <div className="app">
+      {isLanding && (
+        <div className="landing-bg" aria-hidden="true">
+          <Grainient
+            color1="#f0ede5"
+            color2="#b2d4dd"
+            color3="#27293d"
+            zoom={1.1}
+            contrast={1.15}
+            grainAmount={0.05}
+            warpAmplitude={70}
+          />
+        </div>
+      )}
+
+      <div className={isLanding ? 'landing-panel' : 'view-passthrough'}>
+      <div className={isLanding ? 'landing-card' : 'view-passthrough'}>
+
       {view !== 'preview' && view !== 'processing' && (
         <header className="app-header">
           <h1>Transcript to Medium</h1>
@@ -159,8 +193,42 @@ function App() {
 
         {view === 'history' && (
           <div className="history-stage">
+            <p className="history-notice">
+              Editions are stored locally in this project's SQLite database — not backed up or synced anywhere
+              else. Clearing the server's data folder (or deleting them below) removes them for good.
+            </p>
+
+            <div className="history-toolbar">
+              <input
+                type="search"
+                className="history-search"
+                placeholder="Search past editions..."
+                value={editionSearch}
+                onChange={(event) => setEditionSearch(event.target.value)}
+                aria-label="Search past editions"
+              />
+              <button
+                type="button"
+                className="btn btn-secondary history-delete-all"
+                onClick={handleDeleteAllEditions}
+                disabled={!editions.length}
+              >
+                Delete all
+              </button>
+            </div>
+
             {error && <p className="app-error">{error}</p>}
-            <EditionsList editions={editions} onSelect={openEdition} />
+            <EditionsList
+              editions={editions.filter((edition) =>
+                edition.title.toLowerCase().includes(editionSearch.trim().toLowerCase()),
+              )}
+              onSelect={openEdition}
+              emptyMessage={
+                editionSearch.trim() && editions.length
+                  ? 'No editions match your search.'
+                  : undefined
+              }
+            />
           </div>
         )}
 
@@ -208,6 +276,9 @@ function App() {
       <footer className="app-footer">
         <p>Developed by Lavanya Kamble</p>
       </footer>
+
+      </div>
+      </div>
     </div>
   )
 }

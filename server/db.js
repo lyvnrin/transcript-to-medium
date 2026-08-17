@@ -36,3 +36,7 @@ export function listEditions() {
 export function getEdition(id) {
   return db.prepare('SELECT id, title, html, created_at, source_filename FROM editions WHERE id = ?').get(id)
 }
+
+export function deleteAllEditions() {
+  db.prepare('DELETE FROM editions').run()
+}

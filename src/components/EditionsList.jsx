@@ -8,9 +8,9 @@ function formatDateTime(sqliteTimestamp) {
   })
 }
 
-function EditionsList({ editions, onSelect, activeId }) {
+function EditionsList({ editions, onSelect, activeId, emptyMessage = 'No past editions yet. Generate one to see it here.' }) {
   if (!editions.length) {
-    return <p className="editions-empty">No past editions yet. Generate one to see it here.</p>
+    return <p className="editions-empty">{emptyMessage}</p>
   }
 
   return (

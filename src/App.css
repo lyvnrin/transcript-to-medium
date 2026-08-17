@@ -4,6 +4,64 @@
   flex-direction: column;
 }
 
+/* Landing background --------------------------------------------------- */
+
+.landing-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.view-passthrough {
+  display: contents;
+}
+
+.landing-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.landing-card {
+  width: 100%;
+  max-width: 620px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 55%, transparent);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.landing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.landing-card .app-header {
+  padding: 40px 32px 8px;
+}
+
+.landing-card .upload-stage,
+.landing-card .info-stage,
+.landing-card .history-stage {
+  padding: 24px 32px 32px;
+}
+
+.landing-card .app-footer {
+  padding: 16px 24px 28px;
+}
+
 .app-main {
   flex: 1;
   display: flex;
@@ -46,16 +104,12 @@
   font-weight: 700;
   font-size: 40px;
   letter-spacing: -0.3px;
-  background: linear-gradient(120deg, var(--text) 35%, var(--accent));
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+  color: var(--text);
 }
 
 .app-header p {
   margin-top: 12px;
   color: var(--text-muted);
-  font-style: italic;
   font-size: 17px;
 }
 
@@ -77,7 +131,7 @@
   width: 64px;
   height: 3px;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--glow-a), var(--glow-b));
+  background: var(--accent);
   opacity: 0.7;
 }
 
@@ -88,10 +142,16 @@
   color: var(--text-muted);
   font-size: 14px;
   border-bottom: 1.5px solid transparent;
+  outline: none;
 }
 
 .app-nav button:hover {
   color: var(--text);
+}
+
+.app-nav button:focus-visible {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 .app-nav button.active {
@@ -130,7 +190,7 @@
   text-align: center;
   padding: 32px;
   border: 1.5px dashed var(--border-strong);
-  border-radius: 16px;
+  border-radius: 4px;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
@@ -245,24 +305,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 40px;
   padding: 24px 20px 96px;
 }
 
 .info-section {
   width: 100%;
   max-width: 620px;
-  padding: 28px 32px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s, transform 0.2s;
+  padding: 28px 0;
 }
 
-.info-section:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+.info-section + .info-section {
+  border-top: 1px solid var(--border);
 }
 
 .info-section h2 {
@@ -307,6 +360,52 @@
   padding: 24px 20px 80px;
 }
 
+.history-notice {
+  width: 100%;
+  max-width: 620px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--hover-tint);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.history-toolbar {
+  width: 100%;
+  max-width: 620px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.history-search {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.history-search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.history-delete-all {
+  flex-shrink: 0;
+  padding: 10px 18px;
+}
+
+.history-delete-all:hover:not(:disabled) {
+  border-color: #b3441c;
+  color: #b3441c;
+}
+
 .editions-empty {
   color: var(--text-muted);
   font-size: 15px;
@@ -330,13 +429,15 @@
   background: none;
   border: none;
   border-bottom: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 18px 12px;
   text-align: left;
+  outline: none;
   transition: background-color 0.2s, border-color 0.2s;
 }
 
-.edition-item:hover {
+.edition-item:hover,
+.edition-item:focus-visible {
   border-bottom-color: var(--accent);
   background: var(--hover-tint);
 }

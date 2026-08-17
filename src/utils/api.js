@@ -55,3 +55,8 @@ export async function fetchEdition(id) {
   if (!response.ok) throw new Error('Failed to load that edition.')
   return response.json()
 }
+
+export async function deleteAllEditions() {
+  const response = await fetch('/api/editions', { method: 'DELETE' })
+  if (!response.ok) throw new Error('Failed to delete past editions.')
+}
