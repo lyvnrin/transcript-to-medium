@@ -175,6 +175,7 @@
 
 .article-preview p {
   margin: 0 0 26px;
+  text-align: justify;
 }
 
 .article-preview ul {
@@ -184,6 +185,7 @@
 
 .article-preview li {
   margin-bottom: 10px;
+  text-align: justify;
 }
 
 .article-preview hr {
