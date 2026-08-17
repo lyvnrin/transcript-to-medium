@@ -3,6 +3,9 @@ import UploadZone from './components/UploadZone.jsx'
 import ArticlePreview from './components/ArticlePreview.jsx'
 import ExportBar from './components/ExportBar.jsx'
 import EditionsList from './components/EditionsList.jsx'
+import ArticleMenu from './components/ArticleMenu.jsx'
+import BackToTop from './components/BackToTop.jsx'
+import InfoPage from './components/InfoPage.jsx'
 import { processTranscript, fetchEditions, fetchEdition } from './utils/api.js'
 import './App.css'
 
@@ -14,14 +17,26 @@ const STATUS_MESSAGES = {
 }
 
 const LAST_EDITION_KEY = 'transcript-to-medium:last-edition-id'
+const THEME_KEY = 'transcript-to-medium:theme'
+
+function toArticle(edition) {
+  return { id: edition.id, html: edition.html, sourceFilename: edition.source_filename }
+}
 
 function App() {
-  const [view, setView] = useState('upload') // 'upload' | 'processing' | 'preview' | 'history'
+  const [view, setView] = useState('upload') // 'upload' | 'processing' | 'preview' | 'history' | 'info'
   const [file, setFile] = useState(null)
   const [processingMessage, setProcessingMessage] = useState('')
-  const [article, setArticle] = useState(null) // { id, html }
+  const [article, setArticle] = useState(null) // { id, html, sourceFilename }
   const [editions, setEditions] = useState([])
+  const [editionsPanelOpen, setEditionsPanelOpen] = useState(false)
   const [error, setError] = useState('')
+  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'light')
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem(THEME_KEY, theme)
+  }, [theme])
 
   useEffect(() => {
     const lastId = localStorage.getItem(LAST_EDITION_KEY)
@@ -29,7 +44,7 @@ function App() {
 
     fetchEdition(lastId)
       .then((edition) => {
-        setArticle({ id: edition.id, html: edition.html })
+        setArticle(toArticle(edition))
         setView('preview')
       })
       .catch(() => localStorage.removeItem(LAST_EDITION_KEY))
@@ -46,7 +61,7 @@ function App() {
       const { html, id } = await processTranscript(file, (stage) => {
         setProcessingMessage(STATUS_MESSAGES[stage] || '')
       })
-      setArticle({ id, html })
+      setArticle({ id, html, sourceFilename: file.name })
       localStorage.setItem(LAST_EDITION_KEY, id)
       setView('preview')
     } catch (err) {
@@ -59,6 +74,7 @@ function App() {
     setFile(null)
     setArticle(null)
     setError('')
+    setEditionsPanelOpen(false)
     localStorage.removeItem(LAST_EDITION_KEY)
     setView('upload')
   }
@@ -76,11 +92,25 @@ function App() {
   const openEdition = async (id) => {
     try {
       const edition = await fetchEdition(id)
-      setArticle({ id: edition.id, html: edition.html })
+      setArticle(toArticle(edition))
       localStorage.setItem(LAST_EDITION_KEY, edition.id)
       setView('preview')
     } catch (err) {
       setError(err.message || 'Failed to load that edition.')
+    }
+  }
+
+  const toggleEditionsPanel = async () => {
+    if (editionsPanelOpen) {
+      setEditionsPanelOpen(false)
+      return
+    }
+
+    try {
+      setEditions(await fetchEditions())
+      setEditionsPanelOpen(true)
+    } catch (err) {
+      setError(err.message || 'Failed to load past editions.')
     }
   }
 
@@ -96,6 +126,9 @@ function App() {
             </button>
             <button type="button" className={view === 'history' ? 'active' : ''} onClick={openHistory}>
               Past editions
+            </button>
+            <button type="button" className={view === 'info' ? 'active' : ''} onClick={() => setView('info')}>
+              How it works
             </button>
           </nav>
         </header>
@@ -131,13 +164,50 @@ function App() {
           </div>
         )}
 
+        {view === 'info' && <InfoPage />}
+
         {view === 'preview' && article && (
           <div className="preview-stage">
-            <ArticlePreview html={article.html} />
-            <ExportBar article={article} onReset={handleReset} onBrowse={openHistory} />
+            <ArticleMenu
+              article={article}
+              onReset={handleReset}
+              editionsPanelOpen={editionsPanelOpen}
+              onToggleEditionsPanel={toggleEditionsPanel}
+              theme={theme}
+              onSetTheme={setTheme}
+            />
+            <BackToTop />
+
+            <div className={`preview-layout${editionsPanelOpen ? ' with-panel' : ''}`}>
+              <div className="preview-main">
+                <ArticlePreview html={article.html} />
+                <ExportBar article={article} />
+              </div>
+
+              {editionsPanelOpen && (
+                <aside className="editions-panel">
+                  <div className="editions-panel-header">
+                    <h2>Past editions</h2>
+                    <button
+                      type="button"
+                      className="editions-panel-close"
+                      aria-label="Close past editions"
+                      onClick={() => setEditionsPanelOpen(false)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <EditionsList editions={editions} onSelect={openEdition} activeId={article.id} />
+                </aside>
+              )}
+            </div>
           </div>
         )}
       </main>
+
+      <footer className="app-footer">
+        <p>Developed by Lavanya Kamble</p>
+      </footer>
     </div>
   )
 }

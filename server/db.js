@@ -17,8 +17,15 @@ db.exec(`
   )
 `)
 
-export function insertEdition(title, html) {
-  const { lastInsertRowid } = db.prepare('INSERT INTO editions (title, html) VALUES (?, ?)').run(title, html)
+const columns = db.prepare('PRAGMA table_info(editions)').all().map((column) => column.name)
+if (!columns.includes('source_filename')) {
+  db.exec('ALTER TABLE editions ADD COLUMN source_filename TEXT')
+}
+
+export function insertEdition(title, html, sourceFilename) {
+  const { lastInsertRowid } = db
+    .prepare('INSERT INTO editions (title, html, source_filename) VALUES (?, ?, ?)')
+    .run(title, html, sourceFilename)
   return lastInsertRowid
 }
 
@@ -27,5 +34,5 @@ export function listEditions() {
 }
 
 export function getEdition(id) {
-  return db.prepare('SELECT id, title, html, created_at FROM editions WHERE id = ?').get(id)
+  return db.prepare('SELECT id, title, html, created_at, source_filename FROM editions WHERE id = ?').get(id)
 }

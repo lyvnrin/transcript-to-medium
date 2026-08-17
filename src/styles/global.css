@@ -1,15 +1,17 @@
 :root {
-  --bg: #faf8f5;
+  /* Maritime Blue #27293d, Blue Glow #b2d4dd, Coconut Milk #f0ede5 */
+  --bg: #f0ede5;
   --surface: #ffffff;
-  --text: #2b2620;
-  --text-muted: #766e63;
-  --border: #e6e0d6;
-  --border-strong: #d8cfc0;
-  --accent: #a8501f;
-  --accent-hover: #8a3f16;
+  --text: #27293d;
+  --text-muted: #6b6e80;
+  --border: #dfe8ea;
+  --border-strong: #c7d9dc;
+  --accent: #34697d;
+  --accent-hover: #285263;
+  --hover-tint: #e8f2f4;
 
-  --sans: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Segoe UI', system-ui, sans-serif;
-  --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  --sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
 
   color-scheme: light;
   color: var(--text);
@@ -18,6 +20,20 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme='dark'] {
+  --bg: #27293d;
+  --surface: #313449;
+  --text: #f0ede5;
+  --text-muted: #b3aea2;
+  --border: #3b3e57;
+  --border-strong: #4a4d6b;
+  --accent: #b2d4dd;
+  --accent-hover: #c9e2e8;
+  --hover-tint: #323a54;
+
+  color-scheme: dark;
 }
 
 * {
@@ -87,7 +103,7 @@ input {
 }
 
 .btn-primary {
-  color: #fff;
+  color: var(--bg);
   background: var(--accent);
 }
 

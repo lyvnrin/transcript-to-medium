@@ -392,7 +392,7 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
 
     sendEvent({ status: 'formatting' })
     const html = await renderArticleHtml(structured)
-    const id = insertEdition(extractTitle(html), html)
+    const id = insertEdition(extractTitle(html), html, req.file.originalname)
 
     sendEvent({ status: 'done', html, id })
   } catch (err) {
