@@ -8,6 +8,7 @@ import './App.css'
 const STATUS_MESSAGES = {
   extracting: 'Extracting content...',
   structuring: 'Structuring article...',
+  previewing: 'Fetching link previews...',
   formatting: 'Formatting for Medium...',
 }
 

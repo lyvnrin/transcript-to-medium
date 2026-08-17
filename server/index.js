@@ -26,7 +26,8 @@ const SYSTEM_PROMPT = `You are an editorial assistant for a biweekly Applied AI 
       "speaker": "string or null — who presented it",
       "summary": "string — 2-4 paragraph write-up of what was shared, written in an engaging editorial voice, not meeting minutes",
       "keyTakeaway": "string — one sentence takeaway",
-      "links": ["any URLs mentioned"]
+      "links": ["any URLs mentioned"],
+      "featuredLink": "string or null — the single URL from links that's most central to this topic (e.g. the tool's homepage or the article being discussed), or null if none of the links stand out"
     }
   ],
   "closingNote": "string — a brief editorial wrap-up paragraph"
@@ -38,13 +39,13 @@ const TEMPLATE_SYSTEM_PROMPT = `You are a tech editorial writer. You receive str
 
 Follow this template structure exactly:
 
-1. TITLE — as an h1. Make it catchy and magazine-like, weave in the most interesting topic. Include the edition number naturally (e.g. 'AI Briefing #14: ...').
+1. TITLE — as an h1. Make it catchy and magazine-like, weave in the most interesting topic. Just the title itself — no edition number, no series name prefix like 'AI Briefing #N:'.
 
-2. INTRO — one short paragraph. Two sentences about PacePort's Applied AI sessions (a biweekly knowledge-sharing series where the team explores what's new and interesting in AI, tech, and the world around them), then a line like 'This edition covers:' followed by a quick list of the topics covered.
+2. INTRO — one short paragraph, two sentences, about PacePort's Applied AI sessions (a biweekly knowledge-sharing series where the team explores what's new and interesting in AI, tech, and the world around them). Just the paragraph — no 'This edition covers' line or list of topics, since the Key Takeaways list right after it already covers that.
 
 3. KEY TAKEAWAYS — an unordered list where each item is the topic name bolded, followed by a one-sentence takeaway. This doubles as a table of contents.
 
-4. SECTIONS — for each topic, an h2 with an editorial angle headline (not just the topic name — frame it like a Verge or Wired subheading). Then 2-4 paragraphs of pure topic explanation. Write like a tech journalist — explain what the thing is, why it matters, what's interesting about it. No meeting language. No speakers. No 'the team discussed' or 'one member shared'. Just straight tech writing as if you're writing a standalone explainer. Include any relevant links inline.
+4. SECTIONS — for each topic, an h2 with an editorial angle headline (not just the topic name — frame it like a Verge or Wired subheading). Then 2-4 paragraphs of pure topic explanation. Write like a tech journalist — explain what the thing is, why it matters, what's interesting about it. No meeting language. No speakers. No 'the team discussed' or 'one member shared'. Just straight tech writing as if you're writing a standalone explainer. Include any relevant links inline — EXCEPT a section's "featuredLink" value: if a section has a non-null "linkPreview" object, do not link or mention that URL inline yourself. Instead, place this exact literal marker on its own line at the end of that section's paragraphs: <!--LINK_CARD:N--> where N is that section's zero-based index in the INPUT JSON's "sections" array (its original index, not its position in your rewritten/ranked order). A real image card gets spliced in over that marker afterward, so just leave it there untouched. Sections with a null "linkPreview" get no marker — treat their links as normal inline links.
 
 5. CLOSING NOTE — a short paragraph wrapping up the edition.
 
@@ -120,6 +121,108 @@ async function generateArticle(transcript) {
   return parseClaudeJson(responseText)
 }
 
+async function fetchTextLimited(url, { maxBytes = 300_000, signal } = {}) {
+  const response = await fetch(url, {
+    signal,
+    redirect: 'follow',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; TranscriptToMediumBot/1.0; +link-preview)',
+      Accept: 'text/html,application/xhtml+xml',
+    },
+  })
+
+  if (!response.ok || !response.body) {
+    throw new Error(`Bad response: ${response.status}`)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let text = ''
+  let bytesRead = 0
+
+  while (bytesRead < maxBytes) {
+    const { value, done } = await reader.read()
+    if (done) break
+    bytesRead += value.byteLength
+    text += decoder.decode(value, { stream: true })
+  }
+
+  reader.cancel().catch(() => {})
+  return { text, finalUrl: response.url || url }
+}
+
+function decodeHtmlEntities(str) {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+}
+
+function extractMetaContent(html, property) {
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']*)["']`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+property=["']${property}["']`, 'i'),
+    new RegExp(`<meta[^>]+name=["']${property}["'][^>]+content=["']([^"']*)["']`, 'i'),
+    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+name=["']${property}["']`, 'i'),
+  ]
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern)
+    if (match) return decodeHtmlEntities(match[1].trim())
+  }
+
+  return null
+}
+
+async function fetchLinkPreview(url) {
+  try {
+    const { text, finalUrl } = await fetchTextLimited(url, { signal: AbortSignal.timeout(5000) })
+
+    const title =
+      extractMetaContent(text, 'og:title') ||
+      decodeHtmlEntities(text.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() || '') ||
+      null
+
+    if (!title) return null
+
+    const description = extractMetaContent(text, 'og:description') || extractMetaContent(text, 'description')
+    const siteName = extractMetaContent(text, 'og:site_name') || new URL(finalUrl).hostname.replace(/^www\./, '')
+
+    let image = extractMetaContent(text, 'og:image')
+    if (image) {
+      try {
+        image = new URL(image, finalUrl).href
+      } catch {
+        image = null
+      }
+    }
+
+    return { url, title, description, siteName, image }
+  } catch {
+    return null
+  }
+}
+
+async function enrichLinkPreviews(structured) {
+  const sections = Array.isArray(structured.sections) ? structured.sections : []
+
+  await Promise.all(
+    sections.map(async (section) => {
+      if (!section.featuredLink) return
+      section.linkPreview = await fetchLinkPreview(section.featuredLink)
+    }),
+  )
+
+  return structured
+}
+
+async function structureTranscript(transcript) {
+  const structured = await generateArticle(transcript)
+  return enrichLinkPreviews(structured)
+}
+
 function cleanHtmlResponse(text) {
   return text
     .trim()
@@ -149,6 +252,64 @@ async function generateHtml(structuredData) {
   return cleanHtmlResponse(responseText)
 }
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function isHttpUrl(value) {
+  try {
+    const protocol = new URL(value).protocol
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function buildLinkCardHtml(section) {
+  const url = section?.featuredLink
+  if (!url || !isHttpUrl(url)) return ''
+
+  const preview = section.linkPreview
+  const escapedUrl = escapeHtml(url)
+
+  if (!preview) {
+    // Scrape failed or was skipped — still surface the link, just as plain text.
+    let hostname
+    try {
+      hostname = new URL(url).hostname.replace(/^www\./, '')
+    } catch {
+      hostname = url
+    }
+    return `<p><a href="${escapedUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(hostname)}</a></p>`
+  }
+
+  const title = escapeHtml(preview.title || preview.siteName || 'Read more')
+  const siteName = escapeHtml(preview.siteName || '')
+  const suffix = siteName ? ` — ${siteName}` : ''
+
+  if (preview.image && isHttpUrl(preview.image)) {
+    const image = escapeHtml(preview.image)
+    return `<figure class="link-embed"><a href="${escapedUrl}" target="_blank" rel="noopener noreferrer"><img src="${image}" alt="" /><figcaption><span class="cap-title">${title}</span>${suffix}<span class="cap-arrow">↗</span></figcaption></a></figure>`
+  }
+
+  return `<p><a href="${escapedUrl}" target="_blank" rel="noopener noreferrer">${title}${suffix}</a></p>`
+}
+
+function insertLinkCards(html, structured) {
+  const sections = Array.isArray(structured.sections) ? structured.sections : []
+  return html.replace(/<!--\s*LINK_CARD:(\d+)\s*-->/g, (_match, index) => buildLinkCardHtml(sections[Number(index)]))
+}
+
+async function renderArticleHtml(structured) {
+  const html = await generateHtml(structured)
+  return insertLinkCards(html, structured)
+}
+
 const app = express()
 app.use(cors())
 app.use(express.json())
@@ -166,7 +327,7 @@ app.post('/api/extract', upload.single('file'), async (req, res, next) => {
       return
     }
 
-    const article = await generateArticle(transcript)
+    const article = await structureTranscript(transcript)
     res.json(article)
   } catch (err) {
     next(err)
@@ -182,7 +343,7 @@ app.post('/api/template', async (req, res, next) => {
   }
 
   try {
-    const html = await generateHtml(req.body)
+    const html = await renderArticleHtml(req.body)
     res.json({ html })
   } catch (err) {
     next(err)
@@ -216,8 +377,11 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
     sendEvent({ status: 'structuring' })
     const structured = await generateArticle(transcript)
 
+    sendEvent({ status: 'previewing' })
+    await enrichLinkPreviews(structured)
+
     sendEvent({ status: 'formatting' })
-    const html = await generateHtml(structured)
+    const html = await renderArticleHtml(structured)
 
     sendEvent({ status: 'done', html })
   } catch (err) {
