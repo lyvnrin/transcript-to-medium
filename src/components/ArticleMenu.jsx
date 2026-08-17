@@ -6,7 +6,7 @@ function countWords(html) {
   return matches ? matches.length : 0
 }
 
-function ArticleMenu({ article, onReset, editionsPanelOpen, onToggleEditionsPanel, theme, onSetTheme }) {
+function ArticleMenu({ article, theme, onSetTheme }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef(null)
   const wordCount = useMemo(() => countWords(article.html), [article.html])
@@ -34,42 +34,20 @@ function ArticleMenu({ article, onReset, editionsPanelOpen, onToggleEditionsPane
       <button
         type="button"
         className="article-menu-trigger"
-        aria-label="Menu"
+        aria-label="Options"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        Menu
+        Options
       </button>
 
       {open && (
         <div className="article-menu-panel">
-          <button
-            type="button"
-            className="article-menu-item"
-            onClick={() => {
-              setOpen(false)
-              onReset()
-            }}
-          >
-            Home
-          </button>
-
           <div className="article-menu-section">
             <p className="article-menu-label">This edition</p>
             <p className="article-menu-detail">Edition #{article.id}</p>
             <p className="article-menu-detail">Source: {article.sourceFilename || 'Unknown'}</p>
           </div>
-
-          <button
-            type="button"
-            className={`article-menu-item${editionsPanelOpen ? ' active' : ''}`}
-            onClick={() => {
-              setOpen(false)
-              onToggleEditionsPanel()
-            }}
-          >
-            Past editions
-          </button>
 
           <div className="article-menu-section">
             <p className="article-menu-label">Appearance</p>

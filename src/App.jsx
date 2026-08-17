@@ -5,6 +5,7 @@ import ArticlePreview from './components/ArticlePreview.jsx'
 import ExportBar from './components/ExportBar.jsx'
 import EditionsList from './components/EditionsList.jsx'
 import ArticleMenu from './components/ArticleMenu.jsx'
+import PastEditionsMenu from './components/PastEditionsMenu.jsx'
 import BackToTop from './components/BackToTop.jsx'
 import InfoPage from './components/InfoPage.jsx'
 import { processTranscript, fetchEditions, fetchEdition, deleteAllEditions } from './utils/api.js'
@@ -31,11 +32,10 @@ function App() {
   const [article, setArticle] = useState(null) // { id, html, sourceFilename }
   const [editions, setEditions] = useState([])
   const [editionSearch, setEditionSearch] = useState('')
-  const [panelSearch, setPanelSearch] = useState('')
-  const [editionsPanelOpen, setEditionsPanelOpen] = useState(false)
   const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'light')
   const isLanding = view !== 'preview' && view !== 'processing'
+  const isWorkspace = view === 'preview'
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -119,7 +119,6 @@ function App() {
     setFile(null)
     setArticle(null)
     setError('')
-    setEditionsPanelOpen(false)
     localStorage.removeItem(LAST_EDITION_KEY)
     window.history.pushState(null, '', '/')
     setView('upload')
@@ -167,23 +166,16 @@ function App() {
     }
   }
 
-  const toggleEditionsPanel = async () => {
-    if (editionsPanelOpen) {
-      setEditionsPanelOpen(false)
-      return
-    }
-
+  const loadEditionsForMenu = async () => {
     try {
       setEditions(await fetchEditions())
-      setPanelSearch('')
-      setEditionsPanelOpen(true)
     } catch (err) {
       setError(err.message || 'Failed to load past editions.')
     }
   }
 
   return (
-    <div className="app">
+    <div className={`app${isWorkspace ? ' is-workspace' : ''}`}>
       {isLanding && (
         <div className="landing-bg" aria-hidden="true">
           <Grainient
@@ -287,55 +279,26 @@ function App() {
 
         {view === 'preview' && article && (
           <div className="preview-stage">
-            <ArticleMenu
-              article={article}
-              onReset={handleReset}
-              editionsPanelOpen={editionsPanelOpen}
-              onToggleEditionsPanel={toggleEditionsPanel}
-              theme={theme}
-              onSetTheme={setTheme}
-            />
+            <div className="workspace-toolbar">
+              <button type="button" className="article-menu-trigger" onClick={handleReset}>
+                Home
+              </button>
+              <ArticleMenu article={article} theme={theme} onSetTheme={setTheme} />
+              <PastEditionsMenu
+                editions={editions}
+                activeId={article.id}
+                onSelect={openEdition}
+                onOpen={loadEditionsForMenu}
+              />
+            </div>
             <BackToTop />
 
-            <div className={`preview-layout${editionsPanelOpen ? ' with-panel' : ''}`}>
+            <div className="preview-layout">
               <div className="preview-main">
+                <span className="edition-badge">Edition #{article.id}</span>
                 <ArticlePreview html={article.html} />
                 <ExportBar article={article} />
               </div>
-
-              {editionsPanelOpen && (
-                <aside className="editions-panel">
-                  <div className="editions-panel-header">
-                    <h2>Past editions</h2>
-                    <button
-                      type="button"
-                      className="editions-panel-close"
-                      aria-label="Close past editions"
-                      onClick={() => setEditionsPanelOpen(false)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <input
-                    type="search"
-                    className="history-search panel-search"
-                    placeholder="Search past editions..."
-                    value={panelSearch}
-                    onChange={(event) => setPanelSearch(event.target.value)}
-                    aria-label="Search past editions"
-                  />
-                  <EditionsList
-                    editions={editions.filter((edition) =>
-                      edition.title.toLowerCase().includes(panelSearch.trim().toLowerCase()),
-                    )}
-                    onSelect={openEdition}
-                    activeId={article.id}
-                    emptyMessage={
-                      panelSearch.trim() && editions.length ? 'No editions match your search.' : undefined
-                    }
-                  />
-                </aside>
-              )}
             </div>
           </div>
         )}

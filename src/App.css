@@ -480,19 +480,28 @@
   color: var(--text-muted);
 }
 
-/* Article menu ----------------------------------------------------------- */
+/* Workspace toolbar -------------------------------------------------------- */
 
-.article-menu {
+.workspace-toolbar {
   position: fixed;
   top: 20px;
   right: 24px;
   z-index: 30;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Article menu ----------------------------------------------------------- */
+
+.article-menu {
+  position: relative;
 }
 
 .article-menu-trigger {
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: 20px;
+  border-radius: 4px;
   padding: 7px 16px;
   color: var(--accent);
   font-family: var(--sans);
@@ -629,78 +638,56 @@
   align-items: center;
 }
 
-/* Editions side panel ----------------------------------------------------- */
-
-.editions-panel {
-  flex: 0 0 300px;
-  position: sticky;
-  top: 24px;
-  max-height: calc(100vh - 48px);
-  overflow-y: auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 8px 16px;
-  box-shadow: var(--shadow-md);
+/* Keep the workspace a flat, undecorated reading surface — no landing glow. */
+#root:has(.app.is-workspace)::before {
+  display: none;
 }
 
-.editions-panel-header {
-  display: flex;
+.edition-badge {
+  align-self: flex-start;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.editions-panel-header h2 {
-  font-family: var(--serif);
+  padding: 6px 14px;
+  margin-bottom: 24px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--glow-a) 32%, var(--surface));
+  color: var(--accent);
+  font-family: var(--sans);
+  font-size: 12px;
   font-weight: 600;
-  font-size: 16px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
-.editions-panel .panel-search {
-  width: 100%;
-  margin: 12px 0 4px;
+.editions-dropdown {
+  width: 320px;
+  max-height: 60vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.editions-panel-close {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 20px;
-  line-height: 1;
-  padding: 0 2px;
+.editions-dropdown::-webkit-scrollbar {
+  display: none;
 }
 
-.editions-panel-close:hover {
-  color: var(--text);
-}
-
-.editions-panel .editions-list {
-  max-width: none;
-}
-
-.editions-panel .edition-item {
+.editions-dropdown .edition-item {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  padding: 14px 2px;
 }
 
-.editions-panel .edition-title {
+.editions-dropdown .edition-title {
   font-size: 15px;
 }
 
-.editions-panel .edition-date {
+.editions-dropdown .edition-date {
   margin-top: 0;
 }
 
-.editions-panel .edition-item.is-active {
-  border-bottom-color: var(--accent);
-}
-
-.editions-panel .edition-item.is-active .edition-title {
-  color: var(--accent);
+.editions-dropdown .panel-search {
+  width: 100%;
+  margin-bottom: 8px;
 }
 
 .article-preview {
@@ -869,20 +856,13 @@
     align-items: flex-start;
   }
 
-  .preview-layout.with-panel {
-    flex-direction: column;
-  }
-
-  .editions-panel {
-    flex-basis: auto;
-    width: 100%;
-    position: static;
-    max-height: none;
-  }
-
-  .article-menu {
+  .workspace-toolbar {
     top: 12px;
     right: 16px;
+  }
+
+  .editions-dropdown {
+    width: min(320px, calc(100vw - 32px));
   }
 
   .back-to-top {
