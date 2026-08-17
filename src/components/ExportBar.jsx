@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { copyToClipboard } from '../utils/export.js'
 
-function ExportBar({ article, onReset }) {
+function ExportBar({ article, onReset, onBrowse }) {
   const [status, setStatus] = useState('')
 
   const flash = (message) => {
@@ -29,9 +29,14 @@ function ExportBar({ article, onReset }) {
         </button>
       </div>
       {status && <span className="export-status">{status}</span>}
-      <button type="button" className="start-over" onClick={onReset}>
-        Start over
-      </button>
+      <div className="export-nav">
+        <button type="button" className="text-link" onClick={onBrowse}>
+          Past editions
+        </button>
+        <button type="button" className="text-link" onClick={onReset}>
+          Start over
+        </button>
+      </div>
     </div>
   )
 }

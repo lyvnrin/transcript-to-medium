@@ -34,7 +34,7 @@ export async function processTranscript(file, onStatus) {
       }
 
       if (payload.status === 'done') {
-        return payload.html
+        return { html: payload.html, id: payload.id }
       }
 
       onStatus?.(payload.status)
@@ -42,4 +42,16 @@ export async function processTranscript(file, onStatus) {
   }
 
   throw new Error('Connection closed before processing finished.')
+}
+
+export async function fetchEditions() {
+  const response = await fetch('/api/editions')
+  if (!response.ok) throw new Error('Failed to load past editions.')
+  return response.json()
+}
+
+export async function fetchEdition(id) {
+  const response = await fetch(`/api/editions/${id}`)
+  if (!response.ok) throw new Error('Failed to load that edition.')
+  return response.json()
 }

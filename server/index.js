@@ -7,6 +7,7 @@ import mammoth from 'mammoth'
 import { PDFParse } from 'pdf-parse'
 import Anthropic from '@anthropic-ai/sdk'
 import dotenv from 'dotenv'
+import { insertEdition, listEditions, getEdition } from './db.js'
 
 dotenv.config()
 
@@ -47,9 +48,9 @@ Follow this template structure exactly:
 
 4. SECTIONS — for each topic, an h2 with an editorial angle headline (not just the topic name — frame it like a Verge or Wired subheading). Then 2-4 paragraphs of pure topic explanation. Write like a tech journalist — explain what the thing is, why it matters, what's interesting about it. No meeting language. No speakers. No 'the team discussed' or 'one member shared'. Just straight tech writing as if you're writing a standalone explainer. Include any relevant links inline — EXCEPT a section's "featuredLink" value: if a section has a non-null "linkPreview" object, do not link or mention that URL inline yourself. Instead, place this exact literal marker on its own line at the end of that section's paragraphs: <!--LINK_CARD:N--> where N is that section's zero-based index in the INPUT JSON's "sections" array (its original index, not its position in your rewritten/ranked order). A real image card gets spliced in over that marker afterward, so just leave it there untouched. Sections with a null "linkPreview" get no marker — treat their links as normal inline links.
 
-5. CLOSING NOTE — a short paragraph wrapping up the edition.
+5. CLOSING NOTE — first an hr tag on its own line to visually separate it from the sections above, then a short paragraph wrapping up the edition.
 
-6. Then an hr tag, followed by a short paragraph: 'Brought to you by the PacePort Applied AI team.'
+6. Then another hr tag, followed by a short paragraph: 'Brought to you by the PacePort Applied AI team.'
 
 Rank the sections by how interesting or novel the topic is, not by the order they appeared in the transcript. Lead with the strongest stuff.
 
@@ -153,6 +154,9 @@ async function fetchTextLimited(url, { maxBytes = 300_000, signal } = {}) {
 
 function decodeHtmlEntities(str) {
   return str
+    .replace(/&#(\d+);/g, (_match, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_match, code) => String.fromCharCode(parseInt(code, 16)))
+    .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -310,6 +314,12 @@ async function renderArticleHtml(structured) {
   return insertLinkCards(html, structured)
 }
 
+function extractTitle(html) {
+  const match = html.match(/<h1[^>]*>(.*?)<\/h1>/is)
+  if (!match) return 'Untitled edition'
+  return decodeHtmlEntities(match[1].replace(/<[^>]+>/g, '')).trim() || 'Untitled edition'
+}
+
 const app = express()
 app.use(cors())
 app.use(express.json())
@@ -382,14 +392,28 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
 
     sendEvent({ status: 'formatting' })
     const html = await renderArticleHtml(structured)
+    const id = insertEdition(extractTitle(html), html)
 
-    sendEvent({ status: 'done', html })
+    sendEvent({ status: 'done', html, id })
   } catch (err) {
     sendEvent({ status: 'error', error: err.message || 'Something went wrong.' })
   } finally {
     await fs.unlink(req.file.path).catch(() => {})
     res.end()
   }
+})
+
+app.get('/api/editions', (_req, res) => {
+  res.json(listEditions())
+})
+
+app.get('/api/editions/:id', (req, res, next) => {
+  const edition = getEdition(Number(req.params.id))
+  if (!edition) {
+    next(httpError(404, 'Edition not found.'))
+    return
+  }
+  res.json(edition)
 })
 
 app.use((err, _req, res, _next) => {

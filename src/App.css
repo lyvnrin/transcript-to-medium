@@ -29,6 +29,31 @@
   font-size: 17px;
 }
 
+.app-nav {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 28px;
+}
+
+.app-nav button {
+  background: none;
+  border: none;
+  padding: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 14px;
+  border-bottom: 1.5px solid transparent;
+}
+
+.app-nav button:hover {
+  color: var(--text);
+}
+
+.app-nav button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 /* Upload stage ------------------------------------------------------------ */
 
 .upload-stage {
@@ -141,6 +166,64 @@
   font-size: 16px;
 }
 
+/* History stage ---------------------------------------------------------- */
+
+.history-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px 80px;
+}
+
+.editions-empty {
+  color: var(--text-muted);
+  font-size: 15px;
+  margin-top: 24px;
+}
+
+.editions-list {
+  width: 100%;
+  max-width: 560px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.edition-item {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 18px 4px;
+  text-align: left;
+  font-family: var(--serif);
+}
+
+.edition-item:hover {
+  border-bottom-color: var(--accent);
+}
+
+.edition-title {
+  font-size: 18px;
+  color: var(--text);
+}
+
+.edition-item:hover .edition-title {
+  color: var(--accent);
+}
+
+.edition-date {
+  flex-shrink: 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 /* Preview stage -------------------------------------------------------- */
 
 .preview-stage {
@@ -215,8 +298,9 @@
 .article-preview .link-embed img {
   display: block;
   width: 100%;
-  aspect-ratio: 1200 / 630;
-  object-fit: cover;
+  max-height: 420px;
+  object-fit: contain;
+  background: var(--surface);
   border-radius: 8px;
   transition: opacity 0.2s;
 }
@@ -275,8 +359,13 @@
   color: var(--accent);
 }
 
-.start-over {
+.export-nav {
   margin-left: auto;
+  display: flex;
+  gap: 20px;
+}
+
+.text-link {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -286,7 +375,7 @@
   padding: 0;
 }
 
-.start-over:hover {
+.text-link:hover {
   color: var(--text);
 }
 
@@ -312,7 +401,7 @@
     align-items: flex-start;
   }
 
-  .start-over {
+  .export-nav {
     margin-left: 0;
   }
 }
