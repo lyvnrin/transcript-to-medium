@@ -14,6 +14,7 @@ import './App.css'
 const STATUS_MESSAGES = {
   extracting: 'Extracting content...',
   structuring: 'Structuring article...',
+  'fact-checking': 'Fact-checking attributions...',
   previewing: 'Fetching link previews...',
   formatting: 'Formatting for Medium...',
 }

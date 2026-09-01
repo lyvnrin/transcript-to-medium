@@ -56,6 +56,17 @@ Rank the sections by how interesting or novel the topic is, not by the order the
 
 Return ONLY the HTML. No markdown. No code fences.`
 
+const FACT_CHECK_SYSTEM_PROMPT = `You are a fact-checker for a tech editorial series. You receive the original raw meeting transcript and a structured JSON article draft generated from it.
+
+Your job: check every article, paper, tool, or work named in the draft's "summary" fields for correct attribution. The draft sometimes confuses "who mentioned this in the meeting" with "who actually created it" — crediting a speaker as the author of a work they merely brought up. Cross-reference the transcript to fix this:
+
+- If a summary credits a speaker as the author/creator of something they only referenced, correct it to name the real author/creator IF the transcript states who that is.
+- If the transcript doesn't say who the real author is, rewrite the credit to remove the false attribution (e.g. "as covered in [work]" instead of "[speaker]'s [work]") rather than inventing a name.
+- Leave correct attributions and everything else in the JSON untouched.
+- Do not change structure, keys, or any field other than correcting "summary" text where a false attribution exists.
+
+Return the complete corrected JSON, same shape as the input. Return ONLY valid JSON, no markdown fences.`
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const upload = multer({ dest: '/tmp' })
 
@@ -120,6 +131,36 @@ async function generateArticle(transcript) {
     .join('')
 
   return parseClaudeJson(responseText)
+}
+
+async function factCheckAttribution(transcript, structured) {
+  let message
+  try {
+    message = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 8192,
+      system: FACT_CHECK_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: `TRANSCRIPT:\n${transcript}\n\nDRAFT JSON:\n${JSON.stringify(structured)}`,
+        },
+      ],
+    })
+  } catch {
+    return structured
+  }
+
+  const responseText = message.content
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
+    .join('')
+
+  try {
+    return parseClaudeJson(responseText)
+  } catch {
+    return structured
+  }
 }
 
 async function fetchTextLimited(url, { maxBytes = 300_000, signal } = {}) {
@@ -272,7 +313,8 @@ async function enrichSectionImages(structured) {
 }
 
 async function structureTranscript(transcript) {
-  const structured = await generateArticle(transcript)
+  const generated = await generateArticle(transcript)
+  const structured = await factCheckAttribution(transcript, generated)
   await Promise.all([enrichLinkPreviews(structured), enrichSectionImages(structured)])
   return structured
 }
@@ -450,7 +492,10 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
     }
 
     sendEvent({ status: 'structuring' })
-    const structured = await generateArticle(transcript)
+    const generated = await generateArticle(transcript)
+
+    sendEvent({ status: 'fact-checking' })
+    const structured = await factCheckAttribution(transcript, generated)
 
     sendEvent({ status: 'previewing' })
     await Promise.all([enrichLinkPreviews(structured), enrichSectionImages(structured)])
