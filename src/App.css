@@ -830,6 +830,33 @@
   transform: translateY(-1px);
 }
 
+.article-preview .section-image {
+  margin: 0 0 24px;
+}
+
+.article-preview .section-image img {
+  display: block;
+  width: 100%;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.article-preview .section-image figcaption {
+  margin-top: 8px;
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.article-preview .section-image figcaption a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .export-bar {
   width: 100%;
   max-width: 680px;
