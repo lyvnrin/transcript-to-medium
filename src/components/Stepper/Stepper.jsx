@@ -43,8 +43,8 @@ function SlideTransition({ children, direction, onHeightReady }) {
       ref={containerRef}
       className="step-slide"
       initial={{ x: direction >= 0 ? '4%' : '-4%', opacity: 0 }}
-      animate={{ x: '0%', opacity: 1 }}
-      exit={{ x: direction >= 0 ? '-4%' : '4%', opacity: 0 }}
+      animate={{ x: '0%', opacity: 1, pointerEvents: 'auto' }}
+      exit={{ x: direction >= 0 ? '-4%' : '4%', opacity: 0, pointerEvents: 'none' }}
       transition={{ duration: 0.22, ease: 'easeOut' }}
     >
       {children}
@@ -107,7 +107,7 @@ function Stepper({
       </div>
 
       <div className="step-content" style={{ height }}>
-        <AnimatePresence initial={false} mode="popLayout">
+        <AnimatePresence initial={false} mode="sync">
           <SlideTransition key={currentStep} direction={direction} onHeightReady={setHeight}>
             {steps[currentStep - 1]}
           </SlideTransition>
