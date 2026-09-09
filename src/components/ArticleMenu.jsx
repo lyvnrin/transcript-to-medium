@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { copyToClipboard } from '../utils/export.js'
+import Pill from './Pill.jsx'
 
 function countWords(html) {
   const text = html.replace(/<[^>]+>/g, ' ')
@@ -9,15 +9,8 @@ function countWords(html) {
 
 function ArticleMenu({ article, theme, onSetTheme }) {
   const [open, setOpen] = useState(false)
-  const [copyStatus, setCopyStatus] = useState('')
   const menuRef = useRef(null)
   const wordCount = useMemo(() => countWords(article.html), [article.html])
-
-  const handleCopy = async () => {
-    await copyToClipboard(article.html)
-    setCopyStatus('Copied!')
-    setTimeout(() => setCopyStatus(''), 1800)
-  }
 
   useEffect(() => {
     if (!open) return
@@ -39,15 +32,7 @@ function ArticleMenu({ article, theme, onSetTheme }) {
 
   return (
     <div className="article-menu" ref={menuRef}>
-      <button
-        type="button"
-        className="article-menu-trigger"
-        aria-label="Options"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        Options
-      </button>
+      <Pill label="Options" active={open} ariaExpanded={open} onClick={() => setOpen((value) => !value)} />
 
       {open && (
         <div className="article-menu-panel">
@@ -77,14 +62,6 @@ function ArticleMenu({ article, theme, onSetTheme }) {
             <p className="article-menu-label">Word count</p>
             <p className="article-menu-detail">{wordCount.toLocaleString()} words</p>
           </div>
-
-          <button type="button" className="article-menu-item article-menu-item-bottom" onClick={handleCopy}>
-            {copyStatus || 'Copy to clipboard'}
-          </button>
-
-          <button type="button" className="article-menu-item" disabled>
-            Download as PDF
-          </button>
         </div>
       )}
     </div>

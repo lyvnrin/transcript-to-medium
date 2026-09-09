@@ -327,14 +327,54 @@ function cleanHtmlResponse(text) {
     .trim()
 }
 
-async function generateHtml(structuredData) {
+const LENGTH_INSTRUCTIONS = {
+  quick: 'Target approximately 500 words.',
+  deep: 'Target approximately 1800 words, going deeper into each topic.',
+}
+
+const TONE_INSTRUCTIONS = {
+  casual: 'Use a casual, blog-friendly, conversational tone rather than the usual editorial voice.',
+  technical: 'Use a more technical, jargon-forward tone, going into more implementation detail.',
+}
+
+const AUDIENCE_INSTRUCTIONS = {
+  developers: 'Audience is developers — assume familiarity with technical concepts.',
+  leadership: 'Audience is leadership — emphasize business impact and strategic implications, and keep deep technical jargon light.',
+}
+
+function buildSettingsInstructions(settings) {
+  const lines = []
+
+  const length = LENGTH_INSTRUCTIONS[settings?.length]
+  if (length) lines.push(length)
+
+  const tone = TONE_INSTRUCTIONS[settings?.tone]
+  if (tone) lines.push(tone)
+
+  if (settings?.tldr) {
+    lines.push('Include a 2-3 sentence TL;DR summary at the top of the article, right after the title.')
+  }
+
+  if (settings?.pullQuotes) {
+    lines.push('Pick 1-2 standout lines from the material and format them as blockquotes to break up the sections.')
+  }
+
+  const audience = AUDIENCE_INSTRUCTIONS[settings?.audience]
+  if (audience) lines.push(audience)
+
+  if (!lines.length) return ''
+
+  return `\n\nAdditional instructions: ${lines.join(' ')}`
+}
+
+async function generateHtml(structuredData, settings) {
   let message
   try {
     message = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 8192,
       system: TEMPLATE_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: JSON.stringify(structuredData) }],
+      messages: [{ role: 'user', content: JSON.stringify(structuredData) + buildSettingsInstructions(settings) }],
     })
   } catch {
     throw httpError(502, 'Failed to generate the article HTML from Claude.')
@@ -416,8 +456,8 @@ function insertSectionImages(html, structured) {
   return html.replace(/<!--\s*SECTION_IMAGE:(\d+)\s*-->/g, (_match, index) => buildSectionImageHtml(sections[Number(index)]))
 }
 
-async function renderArticleHtml(structured) {
-  const html = await generateHtml(structured)
+async function renderArticleHtml(structured, settings) {
+  const html = await generateHtml(structured, settings)
   return insertSectionImages(insertLinkCards(html, structured), structured)
 }
 
@@ -501,7 +541,13 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
     await Promise.all([enrichLinkPreviews(structured), enrichSectionImages(structured)])
 
     sendEvent({ status: 'formatting' })
-    const html = await renderArticleHtml(structured)
+    let settings
+    try {
+      settings = JSON.parse(req.body?.settings || '{}')
+    } catch {
+      settings = {}
+    }
+    const html = await renderArticleHtml(structured, settings)
     const id = insertEdition(extractTitle(html), html, req.file.originalname)
 
     sendEvent({ status: 'done', html, id })

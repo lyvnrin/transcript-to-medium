@@ -1,6 +1,7 @@
-export async function processTranscript(file, onStatus) {
+export async function processTranscript(file, settings, onStatus) {
   const formData = new FormData()
   formData.append('file', file)
+  formData.append('settings', JSON.stringify(settings || {}))
 
   const response = await fetch('/api/process', {
     method: 'POST',
