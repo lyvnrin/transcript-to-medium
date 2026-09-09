@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Grainient from './components/Grainient/Grainient.jsx'
 import UploadZone from './components/UploadZone.jsx'
 import ArticlePreview from './components/ArticlePreview.jsx'
@@ -51,6 +51,7 @@ function App() {
   const [editionSearch, setEditionSearch] = useState('')
   const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'light')
+  const abortRef = useRef(null)
   const isWorkspace = view === 'home' && step === 3
   const isLanding = !isWorkspace
   const unlockedStep = article ? 3 : file ? 2 : 1
@@ -124,24 +125,39 @@ function App() {
   const handleGenerate = async () => {
     if (!file) return
 
+    const isFirstGenerate = !article
     setError('')
     setStep(3)
     setGenerating(true)
     setProcessingMessage(STATUS_MESSAGES.extracting)
 
+    const controller = new AbortController()
+    abortRef.current = controller
+
     try {
-      const { html, id } = await processTranscript(file, articleSettings, (stage) => {
-        setProcessingMessage(STATUS_MESSAGES[stage] || '')
-      })
+      const { html, id } = await processTranscript(
+        file,
+        articleSettings,
+        (stage) => setProcessingMessage(STATUS_MESSAGES[stage] || ''),
+        controller.signal,
+      )
       setArticle({ id, html, sourceFilename: file.name })
       localStorage.setItem(LAST_EDITION_KEY, id)
       window.history.pushState(null, '', `/edition/${id}`)
     } catch (err) {
-      setError(err.message || 'Something went wrong. Please try again.')
-      setStep(2)
+      // A cancelled request isn't a failure — just fall back to whatever was there before.
+      if (err.name !== 'AbortError') {
+        setError(err.message || 'Something went wrong. Please try again.')
+      }
+      if (isFirstGenerate) setStep(2)
     } finally {
       setGenerating(false)
+      abortRef.current = null
     }
+  }
+
+  const handleCancelGenerate = () => {
+    abortRef.current?.abort()
   }
 
   const handleStepChange = (newStep) => {
@@ -247,17 +263,6 @@ function App() {
         <header className="app-header">
           <h1>Transcript to Medium</h1>
           <p>Turn Applied AI session transcripts into polished Medium articles</p>
-          <nav className="app-nav">
-            <button type="button" className={view === 'home' ? 'active' : ''} onClick={handleReset}>
-              New edition
-            </button>
-            <button type="button" className={view === 'history' ? 'active' : ''} onClick={openHistory}>
-              Past editions
-            </button>
-            <button type="button" className={view === 'info' ? 'active' : ''} onClick={openInfo}>
-              How it works
-            </button>
-          </nav>
         </header>
       )}
 
@@ -280,6 +285,7 @@ function App() {
               nextLabel={step === 2 ? 'Generate article' : 'Next'}
               nextDisabled={step === 1 && !file}
               hideNext={step === 3}
+              hideBack={generating}
               disableStepIndicators={generating}
             >
               <Step>
@@ -292,17 +298,37 @@ function App() {
               </Step>
 
               <Step>
-                {generating ? (
+                {generating && !article && (
                   <div className="processing-inline">
                     <div className="spinner" />
                     <p className="processing-message">{processingMessage}</p>
+                    <button type="button" className="btn btn-secondary" onClick={handleCancelGenerate}>
+                      Cancel
+                    </button>
                   </div>
-                ) : article ? (
-                  <>
+                )}
+
+                {article && (
+                  <div className={generating ? 'review-block is-generating' : 'review-block'}>
+                    {generating && (
+                      <div className="review-generating-bar">
+                        <div className="spinner" />
+                        <span className="processing-message">{processingMessage}</span>
+                        <button type="button" className="btn btn-secondary" onClick={handleCancelGenerate}>
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+
                     <span className="edition-badge">Edition #{article.id}</span>
                     <ArticlePreview html={article.html} />
-                    <ExportBar article={article} onRegenerate={handleGenerate} canRegenerate={!!file} />
-                    {error && <p className="app-error">{error}</p>}
+
+                    {!generating && (
+                      <>
+                        <ExportBar article={article} onRegenerate={handleGenerate} canRegenerate={!!file} />
+                        {error && <p className="app-error">{error}</p>}
+                      </>
+                    )}
 
                     <div className="ticker-section">
                       <div className="ticker-header">
@@ -319,8 +345,8 @@ function App() {
                         emptyMessage="No past editions yet."
                       />
                     </div>
-                  </>
-                ) : null}
+                  </div>
+                )}
               </Step>
             </Stepper>
           </div>
@@ -375,6 +401,14 @@ function App() {
 
       {!isWorkspace && (
         <footer className="app-footer">
+          <nav className="app-nav">
+            <button type="button" className={view === 'history' ? 'active' : ''} onClick={openHistory}>
+              Past editions
+            </button>
+            <button type="button" className={view === 'info' ? 'active' : ''} onClick={openInfo}>
+              How it works
+            </button>
+          </nav>
           <p>Developed by Lavanya Kamble</p>
         </footer>
       )}

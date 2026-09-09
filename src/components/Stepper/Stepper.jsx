@@ -63,6 +63,7 @@ function Stepper({
   onNext,
   nextDisabled = false,
   hideNext = false,
+  hideBack = false,
   disableStepIndicators = false,
 }) {
   const [direction, setDirection] = useState(0)
@@ -113,22 +114,28 @@ function Stepper({
         </AnimatePresence>
       </div>
 
-      {(currentStep > 1 || !hideNext) && (
-        <div className="step-footer">
-          {currentStep > 1 ? (
-            <button type="button" className="btn btn-secondary" onClick={handleBack}>
-              {backLabel}
-            </button>
-          ) : (
-            <span />
-          )}
-          {!hideNext && (
-            <button type="button" className="btn btn-primary" disabled={nextDisabled} onClick={handleNext}>
-              {nextLabel}
-            </button>
-          )}
-        </div>
-      )}
+      {(() => {
+        const hasBack = currentStep > 1 && !hideBack
+        const hasNext = !hideNext
+        if (!hasBack && !hasNext) return null
+
+        const footerClass = hasBack && hasNext ? 'step-footer step-footer-split' : hasNext ? 'step-footer step-footer-center' : 'step-footer'
+
+        return (
+          <div className={footerClass}>
+            {hasBack && (
+              <button type="button" className="btn btn-secondary" onClick={handleBack}>
+                {backLabel}
+              </button>
+            )}
+            {hasNext && (
+              <button type="button" className="btn btn-primary" disabled={nextDisabled} onClick={handleNext}>
+                {nextLabel}
+              </button>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
