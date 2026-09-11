@@ -100,8 +100,8 @@
 }
 
 .app-header h1 {
-  font-family: var(--serif);
-  font-weight: 700;
+  font-family: var(--serif-display);
+  font-weight: 600;
   font-size: 40px;
   letter-spacing: -0.3px;
   color: var(--text);
@@ -115,51 +115,46 @@
   text-align: center;
 }
 
-.app-nav {
-  position: relative;
+.landing-nav {
   display: flex;
   justify-content: center;
-  gap: 24px;
-  padding-bottom: 16px;
-  margin-bottom: 8px;
+  gap: 10px;
+  padding-bottom: 20px;
 }
 
-.app-nav::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 64px;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--accent);
-  opacity: 0.7;
-}
-
-.app-nav button {
+.landing-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   background: none;
-  border: none;
-  padding: 0 0 4px;
+  border: 1px solid transparent;
   color: var(--text-muted);
-  font-size: 14px;
-  border-bottom: 1.5px solid transparent;
   outline: none;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
-.app-nav button:hover {
+.landing-nav-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.landing-nav-icon:hover {
   color: var(--text);
+  background: var(--hover-tint);
 }
 
-.app-nav button:focus-visible {
+.landing-nav-icon:focus-visible {
   color: var(--accent);
-  border-bottom-color: var(--accent);
+  border-color: var(--accent);
 }
 
-.app-nav button.active {
+.landing-nav-icon.active {
   color: var(--accent);
-  font-weight: 700;
-  border-bottom-color: var(--accent);
+  background: var(--hover-tint);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 /* Stepper stage ------------------------------------------------------------ */

@@ -10,6 +10,7 @@ import Stepper, { Step } from './components/Stepper/Stepper.jsx'
 import Pill from './components/Pill.jsx'
 import BackToTop from './components/BackToTop.jsx'
 import InfoPage from './components/InfoPage.jsx'
+import LandingNav from './components/LandingNav.jsx'
 import { processTranscript, fetchEditions, fetchEdition, deleteAllEditions, deleteEdition } from './utils/api.js'
 import './App.css'
 
@@ -260,10 +261,13 @@ function App() {
       <div className={isLanding ? 'landing-card' : 'view-passthrough'}>
 
       {isLanding && (
-        <header className="app-header">
-          <h1>Transcript to Medium</h1>
-          <p>Turn Applied AI session transcripts into polished Medium articles</p>
-        </header>
+        <>
+          <header className="app-header">
+            <h1>Transcript to Medium</h1>
+            <p>Turn Applied AI session transcripts into polished Medium articles</p>
+          </header>
+          <LandingNav view={view} onHome={handleReset} onHistory={openHistory} onInfo={openInfo} />
+        </>
       )}
 
       <main className="app-main">
@@ -401,14 +405,6 @@ function App() {
 
       {!isWorkspace && (
         <footer className="app-footer">
-          <nav className="app-nav">
-            <button type="button" className={view === 'history' ? 'active' : ''} onClick={openHistory}>
-              Past editions
-            </button>
-            <button type="button" className={view === 'info' ? 'active' : ''} onClick={openInfo}>
-              How it works
-            </button>
-          </nav>
           <p>Developed by Lavanya Kamble</p>
         </footer>
       )}
