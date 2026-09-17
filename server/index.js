@@ -46,7 +46,7 @@ Follow this template structure exactly:
 
 3. KEY TAKEAWAYS — an h2 reading exactly 'Key Takeaways', then an unordered list where each item is the topic name bolded, followed by a one-sentence takeaway. This doubles as a table of contents.
 
-4. SECTIONS — before EVERY section, including the first one (to break from the Key Takeaways list), place an hr tag on its own line, then the section's h2 with an editorial angle headline (not just the topic name — frame it like a Verge or Wired subheading). Immediately after that h2, on its own line, place this exact literal marker: <!--SECTION_IMAGE:N--> where N is that section's zero-based index in the INPUT JSON's "sections" array (its original index, not its position in your rewritten/ranked order). Do this for every section, regardless of whether it has a linkPreview — a photo gets spliced in over that marker afterward, so just leave it untouched. Then 2-4 paragraphs of pure topic explanation. Write like a tech journalist — explain what the thing is, why it matters, what's interesting about it. No meeting language. No speakers. No 'the team discussed' or 'one member shared'. Just straight tech writing as if you're writing a standalone explainer. Include any relevant links inline — EXCEPT a section's "featuredLink" value: if a section has a non-null "linkPreview" object, do not link or mention that URL inline yourself. Instead, place this exact literal marker on its own line at the end of that section's paragraphs: <!--LINK_CARD:N--> where N is that section's zero-based index in the INPUT JSON's "sections" array (its original index, not its position in your rewritten/ranked order). A real image card gets spliced in over that marker afterward, so just leave it there untouched. Sections with a null "linkPreview" get no marker — treat their links as normal inline links.
+4. SECTIONS — before EVERY section, including the first one (to break from the Key Takeaways list), place an hr tag on its own line, then the section's h2 with an editorial angle headline (not just the topic name — frame it like a Verge or Wired subheading). Then 2-4 paragraphs of pure topic explanation. Write like a tech journalist — explain what the thing is, why it matters, what's interesting about it. No meeting language. No speakers. No 'the team discussed' or 'one member shared'. Just straight tech writing as if you're writing a standalone explainer. Include any relevant links inline — EXCEPT a section's "featuredLink" value: if a section has a non-null "linkPreview" object, do not link or mention that URL inline yourself. After the paragraphs, on its own line, place this exact literal marker: <!--SECTION_IMAGE:N--> where N is that section's zero-based index in the INPUT JSON's "sections" array (its original index, not its position in your rewritten/ranked order). Do this for every section, regardless of whether it has a linkPreview — a photo (or nothing, if none was found) gets spliced in over that marker afterward, so just leave it untouched. Immediately after that, if the section has a non-null "linkPreview" object, place this exact literal marker on its own line: <!--LINK_CARD:N--> where N is that section's zero-based index in the INPUT JSON's "sections" array (its original index, not its position in your rewritten/ranked order). A real link card gets spliced in over that marker afterward, so just leave it there untouched. Sections with a null "linkPreview" get no LINK_CARD marker — treat their links as normal inline links.
 
 5. CLOSING NOTE — first an hr tag on its own line to visually separate it from the sections above, then a short paragraph wrapping up the edition.
 
@@ -264,36 +264,30 @@ async function enrichLinkPreviews(structured) {
 }
 
 async function fetchSectionImage(query) {
-  if (!process.env.UNSPLASH_ACCESS_KEY || !query) return null
+  if (!process.env.PEXELS_API_KEY || !query) return null
 
   try {
     const params = new URLSearchParams({
       query,
       per_page: '1',
       orientation: 'landscape',
-      content_filter: 'high',
     })
 
-    const response = await fetch(`https://api.unsplash.com/search/photos?${params}`, {
-      headers: { Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` },
+    const response = await fetch(`https://api.pexels.com/v1/search?${params}`, {
+      headers: { Authorization: process.env.PEXELS_API_KEY },
       signal: AbortSignal.timeout(5000),
     })
 
     if (!response.ok) return null
 
-    const photo = (await response.json()).results?.[0]
-    if (!photo?.urls?.regular) return null
-
-    // Notify Unsplash of usage, per their API guidelines.
-    if (photo.links?.download_location) {
-      fetch(`${photo.links.download_location}&client_id=${process.env.UNSPLASH_ACCESS_KEY}`).catch(() => {})
-    }
+    const photo = (await response.json()).photos?.[0]
+    if (!photo?.src?.large) return null
 
     return {
-      url: photo.urls.regular,
-      alt: photo.alt_description || query,
-      photographer: photo.user?.name || null,
-      photographerUrl: photo.user?.links?.html || null,
+      url: photo.src.large,
+      alt: photo.alt || query,
+      photographer: photo.photographer || null,
+      photographerUrl: photo.photographer_url || null,
     }
   } catch {
     return null
@@ -305,6 +299,9 @@ async function enrichSectionImages(structured) {
 
   await Promise.all(
     sections.map(async (section) => {
+      // A section with its own link-card image already has a visual — skip the
+      // header photo so the two large images don't stack back-to-back.
+      if (section.linkPreview?.image) return
       section.sectionImage = await fetchSectionImage(section.topic)
     }),
   )
@@ -315,7 +312,8 @@ async function enrichSectionImages(structured) {
 async function structureTranscript(transcript) {
   const generated = await generateArticle(transcript)
   const structured = await factCheckAttribution(transcript, generated)
-  await Promise.all([enrichLinkPreviews(structured), enrichSectionImages(structured)])
+  await enrichLinkPreviews(structured)
+  await enrichSectionImages(structured)
   return structured
 }
 
@@ -445,10 +443,9 @@ function buildSectionImageHtml(section) {
   const image = section?.sectionImage
   if (!image?.url || !isHttpUrl(image.url)) return ''
 
-  const utm = 'utm_source=transcript-to-medium&utm_medium=referral'
-  const photographerUrl = image.photographerUrl ? `${image.photographerUrl}?${utm}` : `https://unsplash.com/?${utm}`
+  const photographerUrl = image.photographerUrl || 'https://www.pexels.com'
 
-  return `<figure class="section-image"><img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || '')}" /><figcaption>Photo by <a href="${escapeHtml(photographerUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(image.photographer || 'Unsplash')}</a> on <a href="https://unsplash.com/?${utm}" target="_blank" rel="noopener noreferrer">Unsplash</a></figcaption></figure>`
+  return `<figure class="section-image"><img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || '')}" /><figcaption>Photo by <a href="${escapeHtml(photographerUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(image.photographer || 'Pexels')}</a> on <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a></figcaption></figure>`
 }
 
 function insertSectionImages(html, structured) {
@@ -538,7 +535,8 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
     const structured = await factCheckAttribution(transcript, generated)
 
     sendEvent({ status: 'previewing' })
-    await Promise.all([enrichLinkPreviews(structured), enrichSectionImages(structured)])
+    await enrichLinkPreviews(structured)
+    await enrichSectionImages(structured)
 
     sendEvent({ status: 'formatting' })
     let settings

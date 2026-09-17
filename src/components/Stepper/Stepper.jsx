@@ -35,7 +35,14 @@ function SlideTransition({ children, direction, onHeightReady }) {
   const containerRef = useRef(null)
 
   useLayoutEffect(() => {
-    if (containerRef.current) onHeightReady(containerRef.current.offsetHeight)
+    const el = containerRef.current
+    if (!el) return
+
+    onHeightReady(el.offsetHeight)
+
+    const observer = new ResizeObserver(() => onHeightReady(el.offsetHeight))
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [children, onHeightReady])
 
   return (

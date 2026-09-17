@@ -7,7 +7,7 @@ Turns raw session transcripts from PacePort's biweekly Applied AI series into po
 1. **Upload** — drop a `.pdf` or `.docx` transcript export on the New edition tab.
 2. **Extract** — the server pulls raw text via `mammoth` (docx) or `pdf-parse` (pdf).
 3. **Structure** — Claude reads the transcript and returns structured JSON: title, subtitle, per-topic summaries, key takeaways, and any links mentioned.
-4. **Link previews & images** — for each topic's featured link, the server scrapes Open Graph metadata (title, description, image) to build a preview card, and searches Unsplash for a header photo matching the topic.
+4. **Link previews & images** — for each topic's featured link, the server scrapes Open Graph metadata (title, description, image) to build a preview card, and searches Pexels for a header photo matching the topic.
 5. **Format** — Claude turns the structured JSON into a magazine-style HTML article, ranked by how interesting each topic is, with link preview cards and section header photos spliced in.
 6. **Export** — copy the article to the clipboard as rich text (headings, bold/italic, links, and images all carry over into Medium's editor), or revisit it later from Past editions, which persist in a local SQLite database.
 
@@ -29,10 +29,10 @@ Add your API keys to a `.env` file in the project root:
 
 ```
 ANTHROPIC_API_KEY=your-key-here
-UNSPLASH_ACCESS_KEY=your-key-here
+PEXELS_API_KEY=your-key-here
 ```
 
-`UNSPLASH_ACCESS_KEY` is optional — get a free key from [unsplash.com/developers](https://unsplash.com/developers) (create an app, use its Access Key). Without it, section header photos are skipped but everything else still works.
+`PEXELS_API_KEY` is optional — get a free key from [pexels.com/api](https://www.pexels.com/api/) (instant approval, no waiting period). Without it, section header photos are skipped but everything else still works.
 
 Then run the app — this starts the Vite dev server (port 5174) and the Express API (port 3002) together:
 
