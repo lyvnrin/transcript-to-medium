@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Grainient from './components/Grainient/Grainient.jsx'
 import UploadZone from './components/UploadZone.jsx'
 import ArticlePreview from './components/ArticlePreview.jsx'
+import TableOfContents from './components/TableOfContents.jsx'
 import ExportBar from './components/ExportBar.jsx'
 import EditionsList from './components/EditionsList.jsx'
 import ArticleMenu from './components/ArticleMenu.jsx'
@@ -52,7 +53,9 @@ function App() {
   const [editionSearch, setEditionSearch] = useState('')
   const [error, setError] = useState('')
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'light')
+  const [pastEditionsOpen, setPastEditionsOpen] = useState(false)
   const abortRef = useRef(null)
+  const articleRef = useRef(null)
   const isWorkspace = view === 'home' && step === 3
   const isLanding = !isWorkspace
   const unlockedStep = article ? 3 : file ? 2 : 1
@@ -289,7 +292,7 @@ function App() {
               nextLabel={step === 2 ? 'Generate article' : 'Next'}
               nextDisabled={step === 1 && !file}
               hideNext={step === 3}
-              hideBack={generating}
+              hideBack={generating || step === 3}
               disableStepIndicators={generating}
             >
               <Step>
@@ -325,10 +328,11 @@ function App() {
                     )}
 
                     <span className="edition-badge">Edition #{article.id}</span>
-                    <ArticlePreview html={article.html} />
+                    <ArticlePreview ref={articleRef} html={article.html} />
 
                     {!generating && (
                       <>
+                        <TableOfContents containerRef={articleRef} html={article.html} />
                         <ExportBar article={article} onRegenerate={handleGenerate} canRegenerate={!!file} />
                         {error && <p className="app-error">{error}</p>}
                       </>
@@ -336,18 +340,30 @@ function App() {
 
                     <div className="ticker-section">
                       <div className="ticker-header">
-                        <p className="article-menu-label">Past editions</p>
+                        <button
+                          type="button"
+                          className="ticker-toggle"
+                          onClick={() => setPastEditionsOpen((open) => !open)}
+                          aria-expanded={pastEditionsOpen}
+                        >
+                          <span className={`ticker-chevron${pastEditionsOpen ? ' is-open' : ''}`} aria-hidden="true">
+                            ▸
+                          </span>
+                          Past editions
+                        </button>
                         <button type="button" className="ticker-view-all" onClick={openHistory}>
                           View all
                         </button>
                       </div>
-                      <EditionsList
-                        editions={editions.slice(0, TICKER_LIMIT)}
-                        onSelect={openEdition}
-                        onDelete={handleDeleteEdition}
-                        activeId={article.id}
-                        emptyMessage="No past editions yet."
-                      />
+                      {pastEditionsOpen && (
+                        <EditionsList
+                          editions={editions.slice(0, TICKER_LIMIT)}
+                          onSelect={openEdition}
+                          onDelete={handleDeleteEdition}
+                          activeId={article.id}
+                          emptyMessage="No past editions yet."
+                        />
+                      )}
                     </div>
                   </div>
                 )}

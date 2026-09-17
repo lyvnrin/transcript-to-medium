@@ -20,8 +20,9 @@ Upload transcript (.pdf/.docx) → extract text → Claude structures into edito
 ## Writing style
 Articles should read like Wired/Verge-style explainers. No meeting language ("the team discussed"), no speaker attribution. Sections are standalone tech explainers.
 
-## Pending
-- Unsplash API approval (~Sep 1 2026, 5-10 business days). Once approved, integrate image suggestions: Claude extracts keywords → backend fetches Unsplash image → user reviews in the article preview.
+## Images
+- Section header photos: Claude extracts a topic keyword per section → backend fetches a matching photo from Pexels → spliced into the article HTML with photographer credit. See `fetchSectionImage` / `buildSectionImageHtml` in `server/index.js`.
+- Switched from Unsplash to Pexels (2026-09-17) because Unsplash's API approval was taking too long; Pexels issues keys instantly. Swapping back or adding Unsplash as a second provider is straightforward — same shape, different endpoint/response fields.
 
 ## Conventions
 - Keep code minimal, no over-engineering
