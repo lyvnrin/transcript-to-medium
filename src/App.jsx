@@ -9,7 +9,6 @@ import ArticleMenu from './components/ArticleMenu.jsx'
 import ArticleSettingsFields from './components/ArticleSettingsFields.jsx'
 import Stepper, { Step } from './components/Stepper/Stepper.jsx'
 import Pill from './components/Pill.jsx'
-import BackToTop from './components/BackToTop.jsx'
 import InfoPage from './components/InfoPage.jsx'
 import LandingNav from './components/LandingNav.jsx'
 import { processTranscript, fetchEditions, fetchEdition, deleteAllEditions, deleteEdition } from './utils/api.js'
@@ -416,8 +415,6 @@ function App() {
 
         {view === 'info' && <InfoPage />}
       </main>
-
-      {isWorkspace && <BackToTop />}
 
       {!isWorkspace && (
         <footer className="app-footer">
