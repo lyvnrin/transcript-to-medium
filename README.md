@@ -25,13 +25,13 @@ A web app that converts raw transcripts from PacePort's biweekly Applied AI & Te
 
 ## Getting Started
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Documentation
 
-- [docs/PROJECT.md](docs/PROJECT.md)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- [PROJECT.md](docs/PROJECT.md)
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ## License
 
