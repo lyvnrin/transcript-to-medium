@@ -16,53 +16,38 @@ const AUDIENCE_OPTIONS = [
   { value: 'leadership', label: 'Leadership' },
 ]
 
-function StopSlider({ label, options, value, onChange }) {
-  const index = Math.max(
-    0,
-    options.findIndex((option) => option.value === value),
-  )
-  const current = options[index]
-
+function SegmentedField({ label, options, value, onChange }) {
   return (
     <div className="settings-field">
-      <div className="settings-field-header">
-        <span className="settings-field-label">{label}</span>
-        <span className="settings-field-value">{current.label}</span>
-      </div>
-      <input
-        type="range"
-        className="settings-slider"
-        min={0}
-        max={options.length - 1}
-        step={1}
-        value={index}
-        onChange={(event) => onChange(options[Number(event.target.value)].value)}
-        aria-label={label}
-      />
-      <div className="settings-slider-ticks">
+      <span className="settings-field-label">{label}</span>
+      <div className="theme-toggle settings-segmented">
         {options.map((option) => (
-          <span key={option.value}>{option.hint}</span>
+          <button
+            key={option.value}
+            type="button"
+            className={value === option.value ? 'active' : ''}
+            onClick={() => onChange(option.value)}
+          >
+            <span>{option.label}</span>
+            <span className="settings-segmented-hint">{option.hint}</span>
+          </button>
         ))}
       </div>
     </div>
   )
 }
 
-function Toggle({ label, checked, onChange }) {
+function Chip({ label, active, onChange }) {
   return (
-    <div className="settings-toggle">
-      <span className="settings-toggle-label">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        className={`settings-switch${checked ? ' is-on' : ''}`}
-        onClick={() => onChange(!checked)}
-      >
-        <span className="settings-switch-thumb" />
-      </button>
-    </div>
+    <button
+      type="button"
+      aria-pressed={active}
+      className={`settings-chip${active ? ' is-active' : ''}`}
+      onClick={() => onChange(!active)}
+    >
+      {active ? '✓ ' : '+ '}
+      {label}
+    </button>
   )
 }
 
@@ -71,30 +56,37 @@ function ArticleSettingsFields({ settings, onChange }) {
 
   return (
     <div className="settings-fields">
-      <StopSlider label="Article Length" options={LENGTH_OPTIONS} value={settings.length} onChange={set('length')} />
-      <StopSlider label="Tone" options={TONE_OPTIONS} value={settings.tone} onChange={set('tone')} />
+      <SegmentedField label="Article Length" options={LENGTH_OPTIONS} value={settings.length} onChange={set('length')} />
+      <SegmentedField label="Tone" options={TONE_OPTIONS} value={settings.tone} onChange={set('tone')} />
 
       <div className="settings-divider" />
 
-      <Toggle label="Include TL;DR" checked={settings.tldr} onChange={set('tldr')} />
-      <Toggle label="Include Pull Quotes" checked={settings.pullQuotes} onChange={set('pullQuotes')} />
+      <div className="settings-chips-row">
+        <Chip label="Include TL;DR" active={settings.tldr} onChange={set('tldr')} />
+        <Chip label="Include Pull Quotes" active={settings.pullQuotes} onChange={set('pullQuotes')} />
+      </div>
 
       <div className="settings-divider" />
 
-      <div className="settings-field">
-        <span className="settings-field-label">Audience</span>
-        <div className="theme-toggle settings-audience">
-          {AUDIENCE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={settings.audience === option.value ? 'active' : ''}
-              onClick={() => set('audience')(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
+      <div className="settings-audience-row">
+        <div className="settings-audience-label-group">
+          <label className="settings-field-label" htmlFor="settings-audience">
+            Audience
+          </label>
+          <span className="settings-audience-hint">Who's reading this?</span>
         </div>
+        <select
+          id="settings-audience"
+          className="settings-audience-select"
+          value={settings.audience}
+          onChange={(event) => set('audience')(event.target.value)}
+        >
+          {AUDIENCE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   )

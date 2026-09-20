@@ -88,7 +88,7 @@ function UploadZone({ file, onFileSelected, extraFiles, onExtraFilesChange }) {
         ) : (
           <>
             <p className="upload-zone-title">Drop your transcript here</p>
-            <p className="upload-zone-hint">or click to browse — .pdf, .docx or .md</p>
+            <p className="upload-zone-hint">or click to browse (.pdf, .docx or .md)</p>
           </>
         )}
       </div>
@@ -139,7 +139,7 @@ function UploadZone({ file, onFileSelected, extraFiles, onExtraFilesChange }) {
               }}
             />
             <p className="upload-zone-title">Drop chat threads or extra notes</p>
-            <p className="upload-zone-hint">up to {MAX_EXTRA_FILES} files — .pdf, .docx or .md</p>
+            <p className="upload-zone-hint">up to {MAX_EXTRA_FILES} files (.pdf, .docx or .md)</p>
           </div>
 
           {extraFiles.length > 0 && (

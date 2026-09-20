@@ -94,7 +94,9 @@
 
 .step-content {
   position: relative;
-  overflow: hidden;
+  /* Clip only the sideways slide; never crop the bottom of the content (buttons, focus rings). */
+  overflow-x: clip;
+  overflow-y: visible;
   transition: height 0.25s ease;
 }
 

@@ -38,9 +38,12 @@ function SlideTransition({ children, direction, onHeightReady }) {
     const el = containerRef.current
     if (!el) return
 
-    onHeightReady(el.offsetHeight)
+    // offsetHeight rounds down, which can shave a fractional pixel off the last row.
+    const measure = () => onHeightReady(Math.ceil(el.getBoundingClientRect().height))
 
-    const observer = new ResizeObserver(() => onHeightReady(el.offsetHeight))
+    measure()
+
+    const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
   }, [children, onHeightReady])
