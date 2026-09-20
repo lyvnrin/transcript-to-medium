@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 
-const ACCEPTED_EXTENSIONS = ['.pdf', '.docx']
+const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.md']
 
 function isAccepted(file) {
   return ACCEPTED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))
@@ -16,7 +16,7 @@ function UploadZone({ file, onFileSelected }) {
     if (!selected) return
 
     if (!isAccepted(selected)) {
-      setLocalError('Please upload a .pdf or .docx file.')
+      setLocalError('Please upload a .pdf, .docx or .md file.')
       return
     }
 
@@ -50,7 +50,7 @@ function UploadZone({ file, onFileSelected }) {
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.docx"
+          accept=".pdf,.docx,.md"
           className="visually-hidden"
           onChange={(event) => handleFiles(event.target.files)}
         />
@@ -62,7 +62,7 @@ function UploadZone({ file, onFileSelected }) {
         ) : (
           <>
             <p className="upload-zone-title">Drop your transcript here</p>
-            <p className="upload-zone-hint">or click to browse — .pdf or .docx</p>
+            <p className="upload-zone-hint">or click to browse — .pdf, .docx or .md</p>
           </>
         )}
       </div>

@@ -4,7 +4,7 @@ function InfoPage() {
       <section className="info-section">
         <h2>Getting started</h2>
         <p>
-          Drop a session transcript (a .pdf or .docx export of the meeting) into the upload zone on the New
+          Drop a session transcript (a .pdf, .docx or .md export of the meeting) into the upload zone on the New
           edition tab, or click it to browse for the file. Hit Generate article and the pipeline extracts the
           text, structures it into topics, fetches link previews for anything referenced, and formats the whole
           thing into a polished Medium-ready article.

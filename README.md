@@ -4,7 +4,7 @@ A web app that converts raw transcripts from PacePort's biweekly Applied AI & Te
 
 ## Features
 
-- **File upload:** accepts `.pdf` and `.docx` transcripts.
+- **File upload:** accepts `.pdf`, `.docx` and `.md` transcripts.
 - **Multi-stage Claude pipeline:** structuring, fact-checking, and formatting, streamed to the UI as progress updates.
 - **Section header photos:** each section gets a matching photo from Pexels, with photographer credit.
 - **Link preview cards:** Open Graph scraping turns referenced links into cards with title, description, and image.

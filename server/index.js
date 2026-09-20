@@ -85,6 +85,10 @@ async function extractText(file) {
       return value
     }
 
+    if (extension === '.md') {
+      return await fs.readFile(file.path, 'utf8')
+    }
+
     if (extension === '.pdf') {
       const buffer = await fs.readFile(file.path)
       const parser = new PDFParse({ data: buffer })
@@ -95,7 +99,7 @@ async function extractText(file) {
     throw httpError(500, 'Failed to extract text from the uploaded file.')
   }
 
-  throw httpError(400, 'Unsupported file type. Please upload a .docx or .pdf file.')
+  throw httpError(400, 'Unsupported file type. Please upload a .docx, .pdf or .md file.')
 }
 
 function parseClaudeJson(text) {
