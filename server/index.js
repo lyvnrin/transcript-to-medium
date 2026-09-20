@@ -306,6 +306,7 @@ async function fetchSectionImage(query) {
     return {
       url: photo.src.large,
       alt: photo.alt || query,
+      caption: photo.alt || `Stock photo illustrating ${query}`,
       photographer: photo.photographer || null,
       photographerUrl: photo.photographer_url || null,
     }
@@ -459,13 +460,23 @@ function insertLinkCards(html, structured) {
   return html.replace(/<!--\s*LINK_CARD:(\d+)\s*-->/g, (_match, index) => buildLinkCardHtml(sections[Number(index)]))
 }
 
+// Pexels alt text describes the photo; keep it to a short one-line caption.
+function formatImageCaption(text) {
+  const cleaned = (text || '').trim().replace(/\s+/g, ' ')
+  if (!cleaned) return ''
+  const short = cleaned.length > 90 ? `${cleaned.slice(0, 90).replace(/\s+\S*$/, '')}…` : cleaned
+  return short.charAt(0).toUpperCase() + short.slice(1)
+}
+
 function buildSectionImageHtml(section) {
   const image = section?.sectionImage
   if (!image?.url || !isHttpUrl(image.url)) return ''
 
   const photographerUrl = image.photographerUrl || 'https://www.pexels.com'
+  const caption = formatImageCaption(image.caption)
+  const captionHtml = caption ? `<span class="image-caption">${escapeHtml(caption)}</span> ` : ''
 
-  return `<figure class="section-image"><img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || '')}" /><figcaption>Photo by <a href="${escapeHtml(photographerUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(image.photographer || 'Pexels')}</a> on <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a></figcaption></figure>`
+  return `<figure class="section-image"><img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || '')}" /><figcaption>${captionHtml}<span class="image-credit">Photo by <a href="${escapeHtml(photographerUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(image.photographer || 'Pexels')}</a> on <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer">Pexels</a></span></figcaption></figure>`
 }
 
 function insertSectionImages(html, structured) {

@@ -1309,6 +1309,17 @@
   opacity: 0.7;
 }
 
+.article-preview .section-image .image-caption {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.article-preview .section-image .image-credit {
+  display: block;
+  margin-top: 2px;
+}
+
 .article-preview .section-image figcaption a {
   color: inherit;
   text-decoration: underline;
