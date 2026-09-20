@@ -460,12 +460,19 @@ function insertLinkCards(html, structured) {
   return html.replace(/<!--\s*LINK_CARD:(\d+)\s*-->/g, (_match, index) => buildLinkCardHtml(sections[Number(index)]))
 }
 
-// Pexels alt text describes the photo; keep it to a short one-line caption.
+// Captions are short labels, not descriptions: the first 8 words of the Pexels alt text, cut so they
+// don't end on a dangling "on a" / "with the".
+const CAPTION_MAX_WORDS = 8
+const CAPTION_TRAILING_WORDS = /(?:[\s,;:-]+(?:a|an|the|and|or|of|on|in|at|to|for|with|by|from|as|while|is|are))+$/i
+
 function formatImageCaption(text) {
-  const cleaned = (text || '').trim().replace(/\s+/g, ' ')
-  if (!cleaned) return ''
-  const short = cleaned.length > 90 ? `${cleaned.slice(0, 90).replace(/\s+\S*$/, '')}…` : cleaned
-  return short.charAt(0).toUpperCase() + short.slice(1)
+  const words = (text || '').trim().split(/\s+/).filter(Boolean)
+  const caption = words
+    .slice(0, CAPTION_MAX_WORDS)
+    .join(' ')
+    .replace(CAPTION_TRAILING_WORDS, '')
+    .replace(/[\s,;:-]+$/, '')
+  return caption.charAt(0).toUpperCase() + caption.slice(1)
 }
 
 function buildSectionImageHtml(section) {
