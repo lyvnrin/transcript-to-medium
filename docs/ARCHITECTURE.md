@@ -2,7 +2,7 @@
 
 ## System Overview
 
-A user uploads a `.pdf` or `.docx` transcript in the React frontend, which sends it to the Express backend as a multipart form. The server extracts the raw text (`mammoth` for `.docx`, `pdf-parse` for `.pdf`) and makes a first Claude API call that structures the transcript into editorial JSON. A second Claude call then fact-checks that JSON against the original transcript. The server enriches the checked JSON with Open Graph link previews and Pexels section photos, and a third Claude call formats it into HTML. The result is stored in SQLite. Throughout, the server streams status events to the client over Server-Sent Events (SSE), ending with the finished HTML.
+A user uploads a `.pdf`, `.docx` or `.md` transcript in the React frontend, optionally with up to five supplementary files such as chat threads, and it sends them to the Express backend as a multipart form. The server extracts the raw text (`mammoth` for `.docx`, `pdf-parse` for `.pdf`), combines the files into one source, and makes a first Claude API call that structures the transcript into editorial JSON. A second Claude call then fact-checks that JSON against the original transcript. The server enriches the checked JSON with Open Graph link previews and Pexels section photos, and a third Claude call formats it into HTML. The result is stored in SQLite. Throughout, the server streams status events to the client over Server-Sent Events (SSE), ending with the finished HTML.
 
 Counting the fact-check, the pipeline makes three Claude calls. The two that carry the main design are the structuring call and the formatting call; the fact-check sits between them.
 
@@ -10,21 +10,21 @@ Counting the fact-check, the pipeline makes three Claude calls. The two that car
 
 All stages run inside the `/api/process` handler in `server/index.js`, in the order below.
 
-1. **File upload.** The frontend sends a multipart `POST` to `/api/process`, with the transcript file and a JSON-encoded `settings` field. The request is built in `src/utils/api.js` (`processTranscript`), and the file is picked in `src/components/UploadZone.jsx`. The server accepts it with `multer`.
+1. **File upload.** The frontend sends a multipart `POST` to `/api/process`, with the transcript in the `file` field, up to five optional files in the repeated `extras` field, and a JSON-encoded `settings` field. The request is built in `src/utils/api.js` (`processTranscript`), and the files are picked in `src/components/UploadZone.jsx`, where the optional files sit behind an "Add optional files" toggle. The server accepts them with `multer` (`upload.fields`).
 
-2. **Text extraction.** `extractText` in `server/index.js` uses `mammoth` for `.docx` and `pdf-parse` for `.pdf` to pull raw text from the uploaded file. An empty result ends the run with an error event.
+2. **Text extraction.** `extractText` in `server/index.js` uses `mammoth` for `.docx`, `pdf-parse` for `.pdf`, and a plain read for `.md` to pull raw text from each uploaded file. `combineSources` then joins the results into one string: the transcript first under a `=== MEETING TRANSCRIPT (name) ===` header, then each supplementary file under `=== SUPPLEMENTARY: name ===`. An empty transcript ends the run with an error event; an empty supplementary file is skipped. With no extra files, the transcript is passed through unchanged.
 
-3. **Article generation.** `generateArticle` calls Claude with an editorial system prompt and the raw transcript. Claude returns structured JSON (see Data Flow below). This is the structuring stage.
+3. **Article generation.** `generateArticle` calls Claude with an editorial system prompt and the combined source text. The prompt tells Claude to treat the transcript and supplementary material as one source and to fold the chat threads' links, tools, and context into the relevant topics rather than covering the chat separately. Claude returns structured JSON (see Data Flow below). This is the structuring stage.
 
 4. **Fact-checking.** `factCheckAttribution` makes a second Claude call that receives the transcript and the draft JSON. It targets one specific error: a draft crediting a speaker as the author of a work they only mentioned. Where the transcript names the real author, the summary is corrected. If this call fails or returns unparseable output, the unchecked draft is used, so a fact-check failure never blocks an article.
 
 5. **Link preview enrichment.** `enrichLinkPreviews` runs `fetchLinkPreview` for each section's `featuredLink`, in parallel. It fetches the page (with a size limit) and reads the Open Graph metadata: title, description, image, and site name. The result is stored on the section as `linkPreview`.
 
-6. **Section image enrichment.** `enrichSectionImages` runs `fetchSectionImage` for each section, in parallel. It searches Pexels for one landscape photo matching the section's topic and stores it as `sectionImage`, with the photographer's name and profile URL for credit. A section is skipped if it already has a link preview with an image, so two large images do not sit back to back. If `PEXELS_API_KEY` is unset or the request fails, the section simply has no photo.
+6. **Section image enrichment.** `enrichSectionImages` runs `fetchSectionImage` for each section, in parallel. It searches Pexels for one landscape photo matching the section's topic and stores it as `sectionImage`, with a caption and the photographer's name and profile URL for credit. The caption is Pexels' own description of the photo, or "Stock photo illustrating <topic>" when Pexels provides none. A section is skipped if it already has a link preview with an image, so two large images do not sit back to back. If `PEXELS_API_KEY` is unset or the request fails, the section simply has no photo.
 
-7. **HTML formatting.** `generateHtml` makes the formatting Claude call. It sends the structured JSON plus any settings instructions, and Claude returns semantic HTML following a fixed template: an `h1` title, a short intro, a Key Takeaways list, one write-up per section, a closing note, and the PacePort tagline. Sections are ranked by how interesting they are rather than by transcript order. Claude leaves HTML comment placeholders (`<!--SECTION_IMAGE:N-->` and `<!--LINK_CARD:N-->`) in each section, and `renderArticleHtml` replaces them with the real photo and preview card markup. `N` is the section's index in the input JSON, so the splice still works after Claude reorders sections.
+7. **HTML formatting.** `generateHtml` makes the formatting Claude call. It sends the structured JSON plus any settings instructions, and Claude returns semantic HTML following a fixed template: an `h1` title, a short intro, a Key Takeaways list, one write-up per section, a closing note, and the PacePort tagline. Sections are ranked by how interesting they are rather than by transcript order. Claude leaves HTML comment placeholders (`<!--SECTION_IMAGE:N-->` and `<!--LINK_CARD:N-->`) in each section, and `renderArticleHtml` replaces them with the real photo and preview card markup. Each photo is a `figure` whose `figcaption` holds the caption (trimmed to about 90 characters by `formatImageCaption`) with the "Photo by … on Pexels" credit on the line below. `N` is the section's index in the input JSON, so the splice still works after Claude reorders sections.
 
-8. **Storage.** `insertEdition` in `server/db.js` writes the title, HTML, and source filename to the `editions` table in SQLite. The uploaded file itself is deleted once processing ends.
+8. **Storage.** `insertEdition` in `server/db.js` writes the title, HTML, and source filename to the `editions` table in SQLite. The uploaded files, including any supplementary ones, are deleted once processing ends.
 
 9. **SSE delivery.** Each stage emits a status event so the frontend can drive a progress stepper. The sequence is `extracting`, `structuring`, `fact-checking`, `previewing`, `formatting`, and `done`. The `done` event carries the final HTML and the edition `id`. An `error` event carries a message if any stage fails.
 
@@ -69,6 +69,7 @@ This is the shape passed from the structuring stage to the formatting stage. Fac
       "sectionImage": {
         "url": "string",
         "alt": "string",
+        "caption": "string",
         "photographer": "string or null",
         "photographerUrl": "string or null"
       }

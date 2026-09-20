@@ -10,12 +10,12 @@ Existing note-taking tools do not close that gap. They produce meeting minutes (
 
 Transcript to Medium converts a session transcript into a Medium-ready article. The pipeline runs in the following stages:
 
-1. **Upload.** The user uploads a `.pdf` or `.docx` transcript.
-2. **Text extraction.** The server pulls the raw text out of the file (`mammoth` for `.docx`, `pdf-parse` for `.pdf`).
+1. **Upload.** The user uploads a `.pdf`, `.docx` or `.md` transcript. They can optionally add up to five supplementary files (for example, chat threads from the session) in the same formats.
+2. **Text extraction.** The server pulls the raw text out of each file (`mammoth` for `.docx`, `pdf-parse` for `.pdf`) and combines the transcript and any supplementary files into a single source.
 3. **Structuring.** Claude reads the transcript and returns editorial JSON: a title, per-topic summaries, key takeaways, and any links mentioned.
 4. **Fact-checking.** A second pass cross-references the structured content against the original transcript, so claims in the article can be traced back to what was said.
 5. **Link preview enrichment.** For each topic's featured link, the server scrapes Open Graph metadata (title, description, image) to build a preview card.
-6. **Header photos.** Claude picks a topic keyword for each section, and the server fetches a matching photo from Pexels, with photographer credit.
+6. **Header photos.** Claude picks a topic keyword for each section, and the server fetches a matching photo from Pexels. Each photo gets a short one-line caption describing it, with the photographer credit underneath.
 7. **Formatting.** Claude renders the JSON into magazine-style HTML, with the link cards and photos spliced in.
 8. **Preview and export.** The user previews the article in the app and copies it into a Medium draft.
 
@@ -33,7 +33,7 @@ The tool produces a single output: a polished HTML article styled for Medium. Th
 
 Medium no longer issues new integration tokens, so there is no direct publish action. Copying the article and pasting it into a new draft is the supported route.
 
-Past editions persist in a local SQLite database. They can be reopened or deleted from the Past Editions view. Uploaded source files are processed and discarded; only the generated article is stored.
+Past editions persist in a local SQLite database. They can be reopened or deleted from the Past Editions view. Uploaded source files (including supplementary ones) are processed and discarded; only the generated article is stored.
 
 ## Target Audience
 
@@ -47,7 +47,7 @@ The project may be open-sourced or handed off to TCS at the end of the internshi
 
 ## Use Cases
 
-**1. Publishing a session write-up.** A facilitator finishes a session covering three topics and exports the transcript as a `.docx`. They upload it, wait for the pipeline to finish, and get back an article in the style of a Wired explainer: one section per topic, each with a header photo, key takeaways, and inline link previews for anything referenced. They review it in the preview and copy it into a Medium draft in one step.
+**1. Publishing a session write-up.** A facilitator finishes a session covering three topics and exports the transcript as a `.docx`. If the session also had a chat thread with shared links, they add it as an optional file. They upload it, wait for the pipeline to finish, and get back an article in the style of a Wired explainer: one section per topic, each with a header photo, key takeaways, and inline link previews for anything referenced. They review it in the preview and copy it into a Medium draft in one step.
 
 **2. Producing a different version for a different audience.** The team wants a shorter, more casual take on the same session for a broader audience. They change the length and tone settings and regenerate. The result is a second edition of the same session, and the original stays in the history.
 
