@@ -44,6 +44,7 @@ function App() {
   const [view, setView] = useState('home') // 'home' | 'history' | 'info'
   const [step, setStep] = useState(1) // 1 upload, 2 settings, 3 review — only meaningful for 'home'
   const [file, setFile] = useState(null)
+  const [extraFiles, setExtraFiles] = useState([])
   const [generating, setGenerating] = useState(false)
   const [processingMessage, setProcessingMessage] = useState('')
   const [article, setArticle] = useState(null) // { id, html, sourceFilename }
@@ -140,6 +141,7 @@ function App() {
     try {
       const { html, id } = await processTranscript(
         file,
+        extraFiles,
         articleSettings,
         (stage) => setProcessingMessage(STATUS_MESSAGES[stage] || ''),
         controller.signal,
@@ -175,6 +177,7 @@ function App() {
 
   const handleReset = () => {
     setFile(null)
+    setExtraFiles([])
     setArticle(null)
     setStep(1)
     setError('')
@@ -295,7 +298,12 @@ function App() {
               disableStepIndicators={generating}
             >
               <Step>
-                <UploadZone file={file} onFileSelected={setFile} />
+                <UploadZone
+                  file={file}
+                  onFileSelected={setFile}
+                  extraFiles={extraFiles}
+                  onExtraFilesChange={setExtraFiles}
+                />
               </Step>
 
               <Step>

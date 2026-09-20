@@ -34,6 +34,8 @@ const SYSTEM_PROMPT = `You are an editorial assistant for a biweekly Applied AI 
   "closingNote": "string — a brief editorial wrap-up paragraph"
 }
 
+The input may contain the main meeting transcript followed by supplementary material (such as chat threads), each under a "=== ... ===" header. Treat them as one source: merge the chat threads' links, tools, and extra context into the relevant topics rather than writing about the chat separately.
+
 Strip all filler words, ums, tangents, and crosstalk. Restructure for readability. Write like a tech journalist, not a note-taker. Return ONLY valid JSON, no markdown fences.`
 
 const TEMPLATE_SYSTEM_PROMPT = `You are a tech editorial writer. You receive structured JSON about topics from a biweekly Applied AI & Tech session. Transform it into a polished Medium article in clean HTML (no classes, no inline styles — just semantic tags: h1, h2, p, ul, li, hr, em, strong, a).
@@ -69,6 +71,7 @@ Return the complete corrected JSON, same shape as the input. Return ONLY valid J
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const upload = multer({ dest: '/tmp' })
+const MAX_EXTRA_FILES = 5
 
 function httpError(status, message) {
   const error = new Error(message)
@@ -100,6 +103,19 @@ async function extractText(file) {
   }
 
   throw httpError(400, 'Unsupported file type. Please upload a .docx, .pdf or .md file.')
+}
+
+async function combineSources(mainFile, extraFiles) {
+  const main = await extractText(mainFile)
+  if (!main.trim()) throw httpError(400, 'The uploaded file has no readable text.')
+  if (!extraFiles.length) return main
+
+  const parts = [`=== MEETING TRANSCRIPT (${mainFile.originalname}) ===\n${main}`]
+  for (const file of extraFiles) {
+    const text = await extractText(file)
+    if (text.trim()) parts.push(`=== SUPPLEMENTARY: ${file.originalname} ===\n${text}`)
+  }
+  return parts.join('\n\n')
 }
 
 function parseClaudeJson(text) {
@@ -508,7 +524,12 @@ app.post('/api/template', async (req, res, next) => {
   }
 })
 
-app.post('/api/process', upload.single('file'), async (req, res) => {
+const processUpload = upload.fields([
+  { name: 'file', maxCount: 1 },
+  { name: 'extras', maxCount: MAX_EXTRA_FILES },
+])
+
+app.post('/api/process', processUpload, async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection', 'keep-alive')
@@ -518,7 +539,10 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
     res.write(`data: ${JSON.stringify(payload)}\n\n`)
   }
 
-  if (!req.file) {
+  const mainFile = req.files?.file?.[0]
+  const extraFiles = req.files?.extras || []
+
+  if (!mainFile) {
     sendEvent({ status: 'error', error: 'No file uploaded.' })
     res.end()
     return
@@ -526,11 +550,7 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
 
   try {
     sendEvent({ status: 'extracting' })
-    const transcript = await extractText(req.file)
-    if (!transcript.trim()) {
-      sendEvent({ status: 'error', error: 'The uploaded file has no readable text.' })
-      return
-    }
+    const transcript = await combineSources(mainFile, extraFiles)
 
     sendEvent({ status: 'structuring' })
     const generated = await generateArticle(transcript)
@@ -550,13 +570,13 @@ app.post('/api/process', upload.single('file'), async (req, res) => {
       settings = {}
     }
     const html = await renderArticleHtml(structured, settings)
-    const id = insertEdition(extractTitle(html), html, req.file.originalname)
+    const id = insertEdition(extractTitle(html), html, mainFile.originalname)
 
     sendEvent({ status: 'done', html, id })
   } catch (err) {
     sendEvent({ status: 'error', error: err.message || 'Something went wrong.' })
   } finally {
-    await fs.unlink(req.file.path).catch(() => {})
+    await Promise.all([mainFile, ...extraFiles].map((file) => fs.unlink(file.path).catch(() => {})))
     res.end()
   }
 })
